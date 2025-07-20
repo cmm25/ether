@@ -13,11 +13,3 @@ export interface WorkItem {
   price?: number; // For approved NFTs
   tokenId?: string; // For approved NFTs
 }
-
-export interface UserProfile {
-  username: string;
-  walletAddress: string;
-  avatar?: string;
-  bio?: string;
-  joinedAt: string;
-}

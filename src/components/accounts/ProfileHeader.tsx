@@ -1,6 +1,8 @@
 "use client"
 import React, { useState } from 'react';
-import Image from 'next/image';
+import ProfileModal from '../Profile/ProfileModal';
+import EditProfileForm from '../Profile/EditProfileForm';
+import { ProfileFormData } from '@/types/profile';
 
 interface UserData {
   username: string;
@@ -29,6 +31,9 @@ interface ProfileHeaderProps {
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
   const [copied, setCopied] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const copyWalletAddress = async () => {
     try {
@@ -44,6 +49,59 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Convert userData to profile format for the form
+  const getProfileData = () => ({
+    id: '1',
+    username: userData.username,
+    email: 'user@example.com', // This would come from actual user data
+    firstName: userData.displayName.split(' ')[0] || '',
+    lastName: userData.displayName.split(' ').slice(1).join(' ') || '',
+    bio: userData.bio,
+    avatar: '', // Would be actual avatar URL
+    walletAddress: userData.walletAddress,
+    website: userData.socialLinks.website || '',
+    twitter: userData.socialLinks.twitter?.replace('https://twitter.com/', '') || '',
+    instagram: userData.socialLinks.instagram?.replace('https://instagram.com/', '') || '',
+    discord: '',
+    location: '',
+    joinedAt: userData.joinedDate,
+    isVerified: userData.verified,
+    preferences: {
+      emailNotifications: true,
+      marketingEmails: false,
+      publicProfile: true,
+      showWalletAddress: false,
+    },
+  });
+
+  const handleEditProfile = () => {
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+  };
+
+  const handleSubmitProfile = async (data: ProfileFormData, avatarFile?: File | null) => {
+    setIsLoading(true);
+    
+    try {
+      // Simulate API call - replace with actual API call in production
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // TODO: Replace with actual API call
+      // await updateUserProfile(data, avatarFile);
+      
+      setShowSuccess(true);
+      setIsEditModalOpen(false);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="relative">
       {/* Cover/Background */}
@@ -55,9 +113,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
       </div>
 
       {/* Profile Content */}
-      <div className="relative -mt-24 md:-mt-36 lg:-mt-40 px-4 sm:px-6 lg:px-8">
+      <div className="relative -mt-24 md:-mt-36 lg:-mt-40 px-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
+          <div className="flex flex-col md:flex-row items-start md:items-end gap-8">
             {/* Avatar */}
             <div className="relative">
               <div className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-gray-900/50 backdrop-blur-sm">
@@ -70,10 +128,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1 space-y-4 pb-6">
+            <div className="flex-1 space-y-6 pb-8">
               {/* Name and Handle */}
-              <div>
-                <div className="flex items-center gap-3 mb-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-3">
                   <h1 className="text-3xl md:text-4xl font-bold text-white">
                     {userData.username}
                   </h1>
@@ -90,18 +148,18 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
               </div>
 
               {/* Bio */}
-              <p className="text-gray-300 max-w-2xl leading-relaxed">
+              <p className="text-gray-300 max-w-2xl leading-relaxed text-lg">
                 {userData.bio}
               </p>
 
               {/* Stats */}
-              <div className="flex flex-wrap gap-6 text-sm">
+              <div className="flex flex-wrap gap-8 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{userData.followers.toLocaleString()}</span>
+                  <span className="text-white font-semibold text-lg">{userData.followers.toLocaleString()}</span>
                   <span className="text-gray-400">Followers</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{userData.following.toLocaleString()}</span>
+                  <span className="text-white font-semibold text-lg">{userData.following.toLocaleString()}</span>
                   <span className="text-gray-400">Following</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -113,10 +171,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
               </div>
 
               {/* Wallet and Social Links */}
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-6">
                 {/* Wallet Address */}
-                <div className="flex items-center gap-2 bg-gray-900/70 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-800/50">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 bg-gray-900/70 backdrop-blur-sm rounded-lg px-5 py-3 border border-gray-800/50">
+                  <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-green-400 rounded-full" />
                     <span className="font-mono text-sm text-gray-300">
                       {userData.ensName || formatWalletAddress(userData.walletAddress)}
@@ -124,7 +182,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
                   </div>
                   <button
                     onClick={copyWalletAddress}
-                    className="p-1 hover:bg-gray-800 rounded transition-colors"
+                    className="p-1.5 hover:bg-gray-800 rounded transition-colors"
                     title="Copy wallet address"
                   >
                     {copied ? (
@@ -186,7 +244,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pb-6">
-              <button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2">
+              <button 
+                onClick={handleEditProfile}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
@@ -203,6 +264,26 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
           </div>
         </div>
       </div>
+
+      {/* Success Message */}
+      {showSuccess && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          Profile updated successfully!
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      <ProfileModal isOpen={isEditModalOpen} onClose={handleCloseModal}>
+        <EditProfileForm
+          initialData={getProfileData()}
+          onSubmit={handleSubmitProfile}
+          onCancel={handleCloseModal}
+          isLoading={isLoading}
+        />
+      </ProfileModal>
     </div>
   );
 };
