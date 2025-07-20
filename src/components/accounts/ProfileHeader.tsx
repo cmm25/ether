@@ -40,7 +40,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
       await navigator.clipboard.writeText(userData.walletAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       console.error('Failed to copy wallet address');
     }
   };
@@ -82,7 +82,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
     setIsEditModalOpen(false);
   };
 
-  const handleSubmitProfile = async (data: ProfileFormData, avatarFile?: File | null) => {
+  const handleSubmitProfile = async (_data: ProfileFormData, _avatarFile?: File | null) => {
     setIsLoading(true);
     
     try {

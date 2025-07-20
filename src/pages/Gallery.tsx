@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import CategoryFilter from '../components/Gallery/CategoryFilter';
 import GalleryItem from '../components/Gallery/GalleryItem';
 import GalleryLightbox from '../components/Gallery/GalleryLightbox';
@@ -16,19 +16,19 @@ const GalleryPage = () => {
     ? galleryItems
     : galleryItems.filter(item => item.category === selectedCategory);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (!selectedItem) return;
     const currentIndex = galleryItems.findIndex(item => item.id === selectedItem.id);
     const nextIndex = (currentIndex + 1) % galleryItems.length;
     setSelectedItem(galleryItems[nextIndex]);
-  };
+  }, [selectedItem]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (!selectedItem) return;
     const currentIndex = galleryItems.findIndex(item => item.id === selectedItem.id);
     const prevIndex = currentIndex === 0 ? galleryItems.length - 1 : currentIndex - 1;
     setSelectedItem(galleryItems[prevIndex]);
-  };
+  }, [selectedItem]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,7 +41,7 @@ const GalleryPage = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItem]);
+  }, [selectedItem, handleNext, handlePrev]);
 
   return (
     <div className="bg-black text-white overflow-hidden">

@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import { SubmissionFormData } from '../types/artwork';
-import { submitArtwork, STAKE_INFO } from '../utils/artworkSubmission';
+import { STAKE_INFO } from '../utils/artworkSubmission';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -62,7 +62,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                 <p className="text-blue-400 text-sm font-medium">Gasless Transaction</p>
               </div>
               <p className="text-gray-300 text-sm">
-                This transaction will be executed gaslessly via Sequence. You'll only need to approve the token stake.
+                This transaction will be executed gaslessly via Sequence. You&apos;ll only need to approve the token stake.
               </p>
             </div>
 

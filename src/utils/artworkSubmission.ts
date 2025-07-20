@@ -10,7 +10,7 @@ export const STAKE_INFO: StakeInfo = {
 /**
  * Upload image to IPFS or other storage solution
  */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(_file: File): Promise<string> {
   // Mock implementation - replace with actual IPFS upload
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -22,7 +22,7 @@ export async function uploadImage(file: File): Promise<string> {
 /**
  * Approve ART token spending for staking
  */
-export async function approveTokenSpending(amount: number): Promise<boolean> {
+export async function approveTokenSpending(_amount: number): Promise<boolean> {
   // Mock implementation - replace with actual Sequence wallet integration
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -35,8 +35,8 @@ export async function approveTokenSpending(amount: number): Promise<boolean> {
  * Stake tokens and submit artwork
  */
 export async function stakeAndSubmit(
-  formData: SubmissionFormData,
-  imageUrl: string
+  _formData: SubmissionFormData,
+  _imageUrl: string
 ): Promise<SubmissionResponse> {
   try {
     // Mock implementation - replace with actual blockchain calls
@@ -95,7 +95,7 @@ export async function submitArtwork(formData: SubmissionFormData): Promise<Submi
 /**
  * Get user's ART token balance
  */
-export async function getTokenBalance(userAddress: string): Promise<number> {
+export async function getTokenBalance(_userAddress: string): Promise<number> {
   // Mock implementation - replace with actual token balance check
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -103,6 +103,10 @@ export async function getTokenBalance(userAddress: string): Promise<number> {
     }, 500);
   });
 }
+
+/**
+ * Check if user has sufficient balance for staking
+ */
 export async function checkSufficientBalance(userAddress: string): Promise<boolean> {
   const balance = await getTokenBalance(userAddress);
   return balance >= STAKE_INFO.amount;

@@ -4,7 +4,7 @@ import AccountFilter from '../components/accounts/AccountFilter';
 import WorkItem from '../components/accounts/WorkItem';
 import ProfileHeader from '../components/accounts/ProfileHeader';
 import { submittedWorks, approvedNfts, collections } from '../data/accountsData';
-import { WorkItem as WorkItemType, AccountTab } from '../types/accounts';
+import { AccountTab } from '../types/accounts';
 
 const AccountsPage = () => {
   const [selectedTab, setSelectedTab] = useState<AccountTab>('Submitted Works');
