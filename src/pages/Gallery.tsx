@@ -52,30 +52,26 @@ const GalleryPage = () => {
 
       <main className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <motion.div
+          <div
             className={`grid auto-rows-[200px] gap-4 md:gap-6 ${selectedCategory === 'All'
               ? 'grid-cols-2 md:grid-cols-6'
               : 'grid-cols-1 md:grid-cols-4 lg:grid-cols-6'
               }`}
-            layout
-            transition={{ duration: 0.8, ease: "easeInOut" }}
           >
-            <AnimatePresence mode="popLayout">
-              {filteredItems.map((item, index) => {
-                const filteredIndex = filteredItems.findIndex(filteredItem => filteredItem.id === item.id);
-                return (
-                  <GalleryItem
-                    key={`${selectedCategory}-${item.id}`}
-                    item={item}
-                    index={index}
-                    filteredIndex={filteredIndex}
-                    category={selectedCategory}
-                    onClick={() => setSelectedItem(item)}
-                  />
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
+            {filteredItems.map((item, index) => {
+              const filteredIndex = filteredItems.findIndex(filteredItem => filteredItem.id === item.id);
+              return (
+                <GalleryItem
+                  key={`${selectedCategory}-${item.id}`}
+                  item={item}
+                  index={index}
+                  filteredIndex={filteredIndex}
+                  category={selectedCategory}
+                  onClick={() => setSelectedItem(item)}
+                />
+              );
+            })}
+          </div>
         </div>
       </main>
 

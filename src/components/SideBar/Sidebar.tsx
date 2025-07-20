@@ -54,15 +54,18 @@ const Sidebar: React.FC<SidebarProps> = ({
           </svg>
         </button>
 
-        {/* List Icon */}
+        {/* Submit Artwork Icon */}
         <button
           className="w-14 h-14 bg-transparent border-2 border-transparent rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 text-gray-400 hover:border-purple-500 hover:text-white hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-1 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 group"
-          title="List"
-          onClick={onListClick}
-          aria-label="List view"
+          title="Submit Artwork"
+          onClick={() => {
+            router.push('/submit-artwork');
+            onListClick?.();
+          }}
+          aria-label="Submit Artwork"
         >
           <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current transition-transform duration-300 group-hover:scale-110">
-            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
           </svg>
         </button>
 

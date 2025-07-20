@@ -40,7 +40,6 @@ const GalleryItem: React.FC<GalleryItemProps> = ({
                 transition: { duration: 0.4, ease: "easeOut" }
             }}
             onClick={onClick}
-            layout
         >
             <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/40 z-10" />
 
