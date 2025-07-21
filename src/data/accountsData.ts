@@ -50,7 +50,7 @@ export const submittedWorks: WorkItem[] = [
     id: 'sub-6',
     title: 'Urban Reflection',
     description: 'City lights reflected in glass surfaces creating abstract patterns.',
-    imageUrl: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1f?w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1200&q=80',
     category: 'Photography',
     submittedAt: '2024-01-10T16:45:00Z',
     status: 'approved'
@@ -73,7 +73,7 @@ export const approvedNfts: WorkItem[] = [
     id: 'nft-2',
     title: 'Urban Reflection',
     description: 'City lights reflected in glass surfaces creating abstract patterns.',
-    imageUrl: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1f?w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1200&q=80',
     category: 'Photography',
     submittedAt: '2024-01-10T16:45:00Z',
     status: 'approved',

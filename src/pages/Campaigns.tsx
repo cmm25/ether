@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { campaigns, votingRounds } from '../data/campaignsData';
 import { Campaign, VotingRound, CampaignSubmission } from '../types/campaigns';
+import CreateCampaignForm from '../components/CreateCampaignForm';
 
 const CountdownTimer = ({ endDate }: { endDate: string }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -240,6 +241,7 @@ export default function CampaignsPage() {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'voting'>('campaigns');
   const [campaignData, setCampaignData] = useState(campaigns);
   const [votingData, setVotingData] = useState(votingRounds);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const handleVote = (submissionId: string) => {
     setCampaignData(prev => prev.map(campaign => ({
@@ -261,6 +263,10 @@ export default function CampaignsPage() {
     })));
   };
 
+  const handleCreateCampaign = (newCampaign: Campaign) => {
+    setCampaignData(prev => [...prev, newCampaign]);
+  };
+
   const activeCampaigns = campaignData.filter(c => c.status === 'active');
   const upcomingCampaigns = campaignData.filter(c => c.status === 'upcoming');
   const endedCampaigns = campaignData.filter(c => c.status === 'ended');
@@ -271,9 +277,20 @@ export default function CampaignsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto p-6 sm:p-8">
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Campaigns & Voting</h1>
-          <p className="text-gray-400 text-lg">Participate in art campaigns and vote for your favorite submissions</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4">Campaigns & Voting</h1>
+            <p className="text-gray-400 text-lg">Participate in art campaigns and vote for your favorite submissions</p>
+          </div>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+            </svg>
+            Create Campaign
+          </button>
         </div>
 
         <div className="flex gap-4 mb-8">
@@ -372,6 +389,12 @@ export default function CampaignsPage() {
           </div>
         )}
       </div>
+
+      <CreateCampaignForm
+        isOpen={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSubmit={handleCreateCampaign}
+      />
     </div>
   );
 }
