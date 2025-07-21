@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { X, AlertTriangle, Zap } from 'lucide-react';
+import type { Campaign } from '../types/campaigns';
 
 interface CreateCampaignFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (campaignData: any) => void;
+  onSubmit: (campaignData: Campaign) => void;
 }
 
 const CREATION_FEE = {
@@ -43,25 +44,26 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
 
   const handlePayment = async () => {
     setIsSubmitting(true);
-    
+
     // Simulate blockchain transaction
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
     // Create campaign
     const newCampaign = {
       id: `camp-${Date.now()}`,
       ...formData,
-      status: 'upcoming',
+      status: 'upcoming' as const,
       totalSubmissions: 0,
       totalVotes: 0,
       prize: 'Featured in Gallery',
+      category: formData.category,
       submissions: []
     };
-    
+
     onSubmit(newCampaign);
     setIsSubmitting(false);
     onClose();
-    
+
     // Reset form
     setFormData({
       title: '',
@@ -178,7 +180,7 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
                 <h3 className="text-amber-400 font-medium">Creation Fee Required</h3>
               </div>
               <p className="text-gray-300 text-sm mb-3">
-                Creating a campaign requires a fee to prevent spam and ensure quality campaigns. This fee helps maintain the platform's integrity.
+                Creating a campaign requires a fee to prevent spam and ensure quality campaigns. This fee helps maintain the platform&apos;s integrity.
               </p>
               <div className="flex items-center justify-between bg-gray-800/50 rounded-lg p-3">
                 <span className="text-white font-medium">Creation Fee:</span>
@@ -192,11 +194,10 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`w-full px-6 py-3 rounded-lg font-medium transition-all ${
-                isFormValid
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              }`}
+              className={`w-full px-6 py-3 rounded-lg font-medium transition-all ${isFormValid
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
+                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                }`}
             >
               Continue to Review
             </button>
@@ -206,7 +207,7 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
         {step === 'confirm' && (
           <div className="p-6 space-y-6">
             <h3 className="text-xl font-bold text-white mb-4">Review Campaign Details</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="text-gray-400 text-sm">Title</label>
