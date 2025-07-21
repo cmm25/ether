@@ -2,15 +2,17 @@ import AppLayout from "../../../components/Layout/AppLayout";
 import CampaignDetailPage from "../../../pages/CampaignDetail";
 
 interface CampaignDetailProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function CampaignDetail({ params }: CampaignDetailProps) {
+export default async function CampaignDetail({ params }: CampaignDetailProps) {
+  const { id } = await params;
+  
   return (
     <AppLayout>
-      <CampaignDetailPage campaignId={params.id} />
+      <CampaignDetailPage campaignId={id} />
     </AppLayout>
   );
 }
