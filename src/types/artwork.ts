@@ -21,6 +21,7 @@ export interface SubmissionFormData {
   title: string;
   description: string;
   image: File | null;
+  campaignId?: string;
 }
 
 export interface SubmissionResponse {

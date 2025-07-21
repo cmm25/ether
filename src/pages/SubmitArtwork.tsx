@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import { SubmissionFormData } from '../types/artwork';
 import { STAKE_INFO } from '../utils/artworkSubmission';
+import { campaigns } from '../data/campaignsData';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ interface ConfirmationModalProps {
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, formData }) => {
+  const selectedCampaign = campaigns.find(c => c.id === formData.campaignId);
+  
   return (
     <AnimatePresence>
       {isOpen && (
@@ -50,6 +53,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                 <p className="text-gray-400 text-sm">Description</p>
                 <p className="text-white">{formData.description}</p>
               </div>
+              {selectedCampaign && (
+                <div>
+                  <p className="text-gray-400 text-sm">Campaign</p>
+                  <p className="text-white font-medium">{selectedCampaign.title}</p>
+                </div>
+              )}
               <div>
                 <p className="text-gray-400 text-sm">Stake Amount</p>
                 <p className="text-white font-medium">{STAKE_INFO.amount} {STAKE_INFO.tokenSymbol} tokens</p>
@@ -110,7 +119,7 @@ const SuccessScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
         <h3 className="text-2xl font-bold text-white mb-4">Artwork Submitted!</h3>
         <p className="text-gray-400 mb-6">
-          Your artwork has been successfully submitted to the gallery. Your submission NFT has been minted and the stake has been processed.
+          Your artwork has been successfully submitted to the campaign. Your submission NFT has been minted and the stake has been processed.
         </p>
 
         <button
@@ -128,7 +137,8 @@ const SubmitArtworkPage: React.FC = () => {
   const [formData, setFormData] = useState<SubmissionFormData>({
     title: '',
     description: '',
-    image: null
+    image: null,
+    campaignId: ''
   });
   const [dragActive, setDragActive] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -136,6 +146,9 @@ const SubmitArtworkPage: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get available campaigns (active and upcoming)
+  const availableCampaigns = campaigns.filter(c => c.status === 'active' || c.status === 'upcoming');
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -183,7 +196,7 @@ const SubmitArtworkPage: React.FC = () => {
     }
   };
 
-  const isFormValid = formData.title.trim() && formData.description.trim() && formData.image;
+  const isFormValid = formData.title.trim() && formData.description.trim() && formData.image && formData.campaignId;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,12 +219,14 @@ const SubmitArtworkPage: React.FC = () => {
   const handleSuccessClose = () => {
     setShowSuccess(false);
     // Reset form
-    setFormData({ title: '', description: '', image: null });
+    setFormData({ title: '', description: '', image: null, campaignId: '' });
     setImagePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
+
+  const selectedCampaign = campaigns.find(c => c.id === formData.campaignId);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -225,16 +240,49 @@ const SubmitArtworkPage: React.FC = () => {
             Submit Your Artwork
           </h1>
           <p className="text-gray-400 text-lg">
-            Share your creative vision with the community and stake to participate in the gallery.
+            Share your creative vision with the community and participate in active campaigns.
           </p>
         </motion.div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Image Upload */}
+          {/* Campaign Selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+          >
+            <label className="block text-lg font-semibold mb-4">Select Campaign</label>
+            <select
+              value={formData.campaignId}
+              onChange={(e) => setFormData(prev => ({ ...prev, campaignId: e.target.value }))}
+              className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+            >
+              <option value="">Choose a campaign...</option>
+              {availableCampaigns.map(campaign => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.title} ({campaign.status === 'active' ? 'Active' : 'Upcoming'})
+                </option>
+              ))}
+            </select>
+            {selectedCampaign && (
+              <div className="mt-3 p-4 bg-gray-900/50 border border-gray-800 rounded-lg">
+                <p className="text-gray-300 text-sm mb-2">{selectedCampaign.description}</p>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-purple-400">Prize: {selectedCampaign.prize}</span>
+                  <span className="text-blue-400">Category: {selectedCampaign.category}</span>
+                  <span className={`${selectedCampaign.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>
+                    Status: {selectedCampaign.status}
+                  </span>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Image Upload */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
             <label className="block text-lg font-semibold mb-4">Artwork Image</label>
             <div
@@ -293,7 +341,7 @@ const SubmitArtworkPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.3 }}
           >
             <label className="block text-lg font-semibold mb-4">Title</label>
             <input
@@ -310,7 +358,7 @@ const SubmitArtworkPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.4 }}
           >
             <label className="block text-lg font-semibold mb-4">Description</label>
             <textarea
@@ -330,7 +378,7 @@ const SubmitArtworkPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.5 }}
             className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-2xl p-6"
           >
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -338,7 +386,7 @@ const SubmitArtworkPage: React.FC = () => {
               Staking Information
             </h3>
             <p className="text-gray-300 mb-4">
-              To submit your artwork to the gallery, you need to stake <span className="text-purple-400 font-semibold">{STAKE_INFO.amount} {STAKE_INFO.tokenSymbol} tokens</span>. 
+              To submit your artwork to the campaign, you need to stake <span className="text-purple-400 font-semibold">{STAKE_INFO.amount} {STAKE_INFO.tokenSymbol} tokens</span>. 
               This helps maintain quality and prevents spam submissions.
             </p>
             <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -351,7 +399,7 @@ const SubmitArtworkPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
             className="pt-4"
           >
             <button
@@ -369,7 +417,7 @@ const SubmitArtworkPage: React.FC = () => {
                   Processing...
                 </div>
               ) : (
-                'Approve & Submit Artwork'
+                'Submit to Campaign'
               )}
             </button>
           </motion.div>
