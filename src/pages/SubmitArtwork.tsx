@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import { SubmissionFormData } from '../types/artwork';
 import { STAKE_INFO } from '../utils/artworkSubmission';
-import { campaigns } from '../data/campaignsData';
+import { fetchCampaigns, submitArtwork } from '../lib/api/campaigns';
+import { Campaign } from '../types/campaigns';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   formData: SubmissionFormData;
+  selectedCampaign?: Campaign;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, formData }) => {
-  const selectedCampaign = campaigns.find(c => c.id === formData.campaignId);
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, formData, selectedCampaign }) => {
   
   return (
     <AnimatePresence>
@@ -134,6 +136,7 @@ const SuccessScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 const SubmitArtworkPage: React.FC = () => {
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState<SubmissionFormData>({
     title: '',
     description: '',
@@ -145,10 +148,34 @@ const SubmitArtworkPage: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableCampaigns, setAvailableCampaigns] = useState<Campaign[]>([]);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get available campaigns (active and upcoming)
-  const availableCampaigns = campaigns.filter(c => c.status === 'active' || c.status === 'upcoming');
+  // Load campaigns and handle URL parameters
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      try {
+        setIsLoadingCampaigns(true);
+        const response = await fetchCampaigns('active');
+        setAvailableCampaigns(response.campaigns.filter(c => c.status === 'active' || c.status === 'upcoming'));
+        
+        // Check for campaign parameter in URL
+        const campaignParam = searchParams.get('campaign');
+        if (campaignParam) {
+          setFormData(prev => ({ ...prev, campaignId: campaignParam }));
+        }
+      } catch (error) {
+        console.error('Error loading campaigns:', error);
+        // Fallback to empty array if API fails
+        setAvailableCampaigns([]);
+      } finally {
+        setIsLoadingCampaigns(false);
+      }
+    };
+
+    loadCampaigns();
+  }, [searchParams]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -226,7 +253,7 @@ const SubmitArtworkPage: React.FC = () => {
     }
   };
 
-  const selectedCampaign = campaigns.find(c => c.id === formData.campaignId);
+  const selectedCampaign = availableCampaigns.find(c => c.id === formData.campaignId);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -252,18 +279,24 @@ const SubmitArtworkPage: React.FC = () => {
             transition={{ delay: 0.1 }}
           >
             <label className="block text-lg font-semibold mb-4">Select Campaign</label>
-            <select
-              value={formData.campaignId}
-              onChange={(e) => setFormData(prev => ({ ...prev, campaignId: e.target.value }))}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
-            >
-              <option value="">Choose a campaign...</option>
-              {availableCampaigns.map(campaign => (
-                <option key={campaign.id} value={campaign.id}>
-                  {campaign.title} ({campaign.status === 'active' ? 'Active' : 'Upcoming'})
-                </option>
-              ))}
-            </select>
+            {isLoadingCampaigns ? (
+              <div className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg">
+                <div className="animate-pulse">Loading campaigns...</div>
+              </div>
+            ) : (
+              <select
+                value={formData.campaignId}
+                onChange={(e) => setFormData(prev => ({ ...prev, campaignId: e.target.value }))}
+                className="w-full px-4 py-3 bg-[#1a1a1a] border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+              >
+                <option value="">Choose a campaign...</option>
+                {availableCampaigns.map(campaign => (
+                  <option key={campaign.id} value={campaign.id}>
+                    {campaign.title} ({campaign.status === 'active' ? 'Active' : 'Upcoming'})
+                  </option>
+                ))}
+              </select>
+            )}
             {selectedCampaign && (
               <div className="mt-3 p-4 bg-gray-900/50 border border-gray-800 rounded-lg">
                 <p className="text-gray-300 text-sm mb-2">{selectedCampaign.description}</p>
@@ -429,6 +462,7 @@ const SubmitArtworkPage: React.FC = () => {
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleConfirmSubmission}
         formData={formData}
+        selectedCampaign={selectedCampaign}
       />
 
       <AnimatePresence>

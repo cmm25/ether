@@ -1,0 +1,93 @@
+# goldsky/ether-automation-pipeline.yaml
+name: ether-automation-pipeline
+apiVersion: 3
+resource_size: s
+
+sources:
+  ethereum_logs:
+    dataset_name: ethereum.logs
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  # Detect campaign end events for automation
+  campaign_end_triggers:
+    sql: |
+      SELECT
+        transaction_hash,
+        CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
+        block_number,
+        block_timestamp,
+        -- Extract campaign end details
+        CASE
+          WHEN topics[0] = '0xCAMPAIGN_ENDED_SIGNATURE' THEN 'natural_end'
+          WHEN topics[0] = '0xCAMPAIGN_FORCE_ENDED_SIGNATURE' THEN 'force_ended'
+          ELSE 'unknown'
+        END as end_type,
+        -- Flag for automation processing
+        'pending_processing' as automation_status,
+        CONCAT('campaign_end_', campaign_id) as trigger_key
+      FROM ethereum_logs
+      WHERE address = '0xYOUR_CAMPAIGN_CONTRACT_ADDRESS'
+        AND topics[0] IN (
+          '0xCAMPAIGN_ENDED_SIGNATURE',
+          '0xCAMPAIGN_FORCE_ENDED_SIGNATURE'
+        )
+    primary_key: trigger_key
+
+  # Get final winners for ended campaigns
+  final_winners:
+    sql: |
+      WITH campaign_ends AS (
+        SELECT DISTINCT campaign_id
+        FROM campaign_end_triggers
+        WHERE automation_status = 'pending_processing'
+      ),
+      final_vote_counts AS (
+        SELECT
+          v.campaign_id,
+          v.submission_id,
+          COUNT(*) as final_vote_count,
+          ROW_NUMBER() OVER (
+            PARTITION BY v.campaign_id
+            ORDER BY COUNT(*) DESC, MIN(v.block_timestamp) ASC
+          ) as final_rank
+        FROM (
+          SELECT
+            CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
+            CAST(CONV(SUBSTRING(topics[2], 3), 16, 10) AS STRING) as submission_id,
+            block_timestamp
+          FROM ethereum_logs
+          WHERE address = '0xYOUR_VOTING_CONTRACT_ADDRESS'
+            AND topics[0] = '0xVOTE_EVENT_SIGNATURE_HASH'
+        ) v
+        INNER JOIN campaign_ends ce ON v.campaign_id = ce.campaign_id
+        GROUP BY v.campaign_id, v.submission_id
+      )
+      SELECT
+        campaign_id,
+        submission_id,
+        final_vote_count,
+        final_rank,
+        CASE WHEN final_rank <= 5 THEN true ELSE false END as is_winner,
+        'ready_for_minting' as mint_status,
+        CONCAT(campaign_id, '_', submission_id, '_winner') as winner_key
+      FROM final_vote_counts
+      WHERE final_rank <= 5
+    primary_key: winner_key
+
+sinks:
+  # Campaign end triggers for automation
+  automation_triggers_sink:
+    type: hosted_postgres
+    table: campaign_automation_triggers
+    schema: ether_live
+    from: campaign_end_triggers
+
+  # Final winners for NFT minting
+  final_winners_sink:
+    type: hosted_postgres
+    table: campaign_final_winners
+    schema: ether_live
+    from: final_winners
