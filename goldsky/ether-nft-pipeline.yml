@@ -1,0 +1,31 @@
+name: ether-nft-pipeline
+apiVersion: 3
+
+sources:
+  ethereum_nft_transfers:
+    dataset_name: ethereum.token_transfers
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  nft_data:
+    sql: |
+      SELECT 
+        transaction_hash,
+        from_address,
+        to_address,
+        token_address,
+        token_id,
+        block_number,
+        block_timestamp
+      FROM ethereum_nft_transfers
+      WHERE token_standard = 'ERC721'
+    primary_key: transaction_hash
+
+sinks:
+  nft_gallery:
+    type: hosted_postgres
+    table: nft_transfers
+    schema: ether_gallery
+    from: nft_data

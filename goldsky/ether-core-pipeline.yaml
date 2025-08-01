@@ -1,0 +1,137 @@
+# goldsky/ether-core-pipeline.yaml
+name: ether-core-pipeline
+apiVersion: 3
+resource_size: s
+
+sources:
+  # NFT Transfers (for minted artworks)
+  ethereum_nft_transfers:
+    dataset_name: ethereum.token_transfers
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+  # Smart Contract Events (for voting)
+  ethereum_logs:
+    dataset_name: ethereum.logs
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  # 1. Filter and process NFT mints for campaign winners
+  campaign_nft_mints:
+    sql: |
+      SELECT
+        transaction_hash,
+        from_address,
+        to_address as winner_address,
+        token_address as nft_contract,
+        token_id,
+        block_number,
+        block_timestamp,
+        -- Extract campaign info from transaction data if embedded
+        CASE
+          WHEN token_address = '0xYOUR_CAMPAIGN_NFT_CONTRACT'
+          THEN 'campaign_winner'
+          ELSE 'regular_nft'
+        END as nft_type
+      FROM ethereum_nft_transfers
+      WHERE token_standard = 'ERC721'
+        AND from_address = '0x0000000000000000000000000000000000000000' -- Mints only
+        AND (
+          token_address = '0xYOUR_CAMPAIGN_NFT_CONTRACT' OR
+          token_address IN (SELECT contract_address FROM approved_nft_contracts)
+        )
+    primary_key: transaction_hash
+
+  # 2. Process voting events from your voting contract
+  campaign_votes:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as voting_contract,
+        -- Decode voting event parameters
+        SUBSTRING(topics[1], 3) as campaign_id_hex,
+        SUBSTRING(topics[2], 3) as submission_id_hex,
+        CONCAT('0x', SUBSTRING(topics[3], 27)) as voter_address,
+        -- Convert hex to readable format
+        CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
+        CAST(CONV(SUBSTRING(topics[2], 3), 16, 10) AS STRING) as submission_id,
+        block_number,
+        block_timestamp,
+        log_index
+      FROM ethereum_logs
+      WHERE address = '0xYOUR_VOTING_CONTRACT_ADDRESS'
+        AND topics[0] = '0xVOTE_EVENT_SIGNATURE_HASH'
+        AND ARRAY_SIZE(topics) >= 4
+    primary_key: transaction_hash
+
+  # 3. Aggregate vote counts per submission
+  vote_aggregations:
+    sql: |
+      SELECT
+        campaign_id,
+        submission_id,
+        COUNT(*) as total_votes,
+        COUNT(DISTINCT voter_address) as unique_voters,
+        MAX(block_timestamp) as last_vote_time,
+        -- Create a composite key for real-time updates
+        CONCAT(campaign_id, '_', submission_id) as campaign_submission_key
+      FROM campaign_votes
+      GROUP BY campaign_id, submission_id
+    primary_key: campaign_submission_key
+
+  # 4. Campaign state changes (start/end events)
+  campaign_lifecycle:
+    sql: |
+      SELECT
+        transaction_hash,
+        SUBSTRING(topics[1], 3) as campaign_id_hex,
+        CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
+        -- Decode event type (CampaignStarted, CampaignEnded, etc.)
+        CASE
+          WHEN topics[0] = '0xCAMPAIGN_STARTED_SIGNATURE' THEN 'started'
+          WHEN topics[0] = '0xCAMPAIGN_ENDED_SIGNATURE' THEN 'ended'
+          WHEN topics[0] = '0xWINNERS_SELECTED_SIGNATURE' THEN 'winners_selected'
+          ELSE 'unknown'
+        END as event_type,
+        block_number,
+        block_timestamp
+      FROM ethereum_logs
+      WHERE address = '0xYOUR_CAMPAIGN_CONTRACT_ADDRESS'
+        AND topics[0] IN (
+          '0xCAMPAIGN_STARTED_SIGNATURE',
+          '0xCAMPAIGN_ENDED_SIGNATURE',
+          '0xWINNERS_SELECTED_SIGNATURE'
+        )
+    primary_key: transaction_hash
+
+sinks:
+  # Store NFT mints for winners
+  nft_mints_sink:
+    type: hosted_postgres
+    table: campaign_nft_mints
+    schema: ether_live
+    from: campaign_nft_mints
+
+  # Store real-time votes
+  votes_sink:
+    type: hosted_postgres
+    table: campaign_votes
+    schema: ether_live
+    from: campaign_votes
+
+  # Store vote aggregations for leaderboards
+  vote_counts_sink:
+    type: hosted_postgres
+    table: vote_aggregations
+    schema: ether_live
+    from: vote_aggregations
+
+  # Store campaign lifecycle events
+  campaign_events_sink:
+    type: hosted_postgres
+    table: campaign_lifecycle
+    schema: ether_live
+    from: campaign_lifecycle

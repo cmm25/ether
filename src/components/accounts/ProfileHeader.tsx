@@ -82,24 +82,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
     setIsEditModalOpen(false);
   };
 
-  const handleSubmitProfile = async (_data: ProfileFormData, _avatarFile?: File | null) => {
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call - replace with actual API call in production
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // TODO: Replace with actual API call
-      // await updateUserProfile(data, avatarFile);
-      
-      setShowSuccess(true);
-      setIsEditModalOpen(false);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleProfileSaved = () => {
+    setShowSuccess(true);
+    setIsEditModalOpen(false);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
   return (
@@ -271,10 +257,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
       {/* Edit Profile Modal */}
       <ProfileModal isOpen={isEditModalOpen} onClose={handleCloseModal}>
         <EditProfileForm
-          initialData={getProfileData()}
-          onSubmit={handleSubmitProfile}
+          walletAddress={userData.walletAddress}
           onCancel={handleCloseModal}
-          isLoading={isLoading}
+          onSaved={handleProfileSaved}
         />
       </ProfileModal>
     </div>

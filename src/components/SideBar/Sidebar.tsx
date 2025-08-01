@@ -1,6 +1,7 @@
 "use client"
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useActiveWallet } from 'thirdweb/react';
 
 interface SidebarProps {
   className?: string;
@@ -20,6 +21,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAccountsClick,
 }) => {
   const router = useRouter();
+  const activeWallet = useActiveWallet();
+
+  const handleLogout = async () => {
+    try {
+      if (activeWallet) {
+        await activeWallet.disconnect();
+      }
+      router.push('/');
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+      // Still redirect even if disconnect fails
+      router.push('/');
+    }
+  };
   return (
     <div className={`w-24 h-screen bg-[#121212] flex flex-col items-center py-5 shadow-2xl fixed left-0 top-0 z-50 ${className}`}>
       {/* Logo/Brand Icon */}
@@ -100,15 +115,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           aria-label="Profile"
         >
           <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current transition-transform duration-300 group-hover:scale-110">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
           </svg>
         </button>
       </div>
 
-      {/* Beta Badge */}
-      <div className="bg-white text-black border-2 border-white px-3 py-1.5 rounded-2xl text-xs font-semibold uppercase tracking-wider mt-auto shadow-lg shadow-white/20 mx-2">
-        Beta
-      </div>
+      {/* Logout Button - Bottom */}
+      <button
+        className="w-14 h-14 bg-transparent border-2 border-transparent rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 text-gray-400 hover:border-red-500 hover:text-red-400 hover:shadow-lg hover:shadow-red-500/30 hover:-translate-y-1 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 group"
+        title="Logout"
+        onClick={handleLogout}
+        aria-label="Logout"
+      >
+        <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current transition-transform duration-300 group-hover:scale-110">
+          <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+        </svg>
+      </button>
     </div>
   );
 };

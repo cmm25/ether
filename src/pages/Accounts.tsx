@@ -1,14 +1,43 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AccountFilter from '../components/accounts/AccountFilter';
 import WorkItem from '../components/accounts/WorkItem';
 import ProfileHeader from '../components/accounts/ProfileHeader';
-import { submittedWorks, approvedNfts, collections } from '../data/accountsData';
 import { AccountTab } from '../types/accounts';
+import { useActiveAccount } from 'thirdweb/react';
+import { fetchSubmittedWorks, fetchApprovedNfts, fetchCollections } from '../lib/api/accounts';
 
 const AccountsPage = () => {
+  const account = useActiveAccount();
   const [selectedTab, setSelectedTab] = useState<AccountTab>('Submitted Works');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [submittedWorks, setSubmittedWorks] = useState<any[]>([]);
+  const [approvedNfts, setApprovedNfts] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (account?.address) {
+        setLoading(true);
+        try {
+          const [submitted, approved, userCollections] = await Promise.all([
+            fetchSubmittedWorks(account.address),
+            fetchApprovedNfts(account.address),
+            fetchCollections(account.address)
+          ]);
+          setSubmittedWorks(submitted);
+          setApprovedNfts(approved);
+          setCollections(userCollections);
+        } catch (error) {
+          console.error("Failed to fetch account data:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchData();
+  }, [account]);
 
   const getCurrentItems = () => {
     switch (selectedTab) {
@@ -25,25 +54,25 @@ const AccountsPage = () => {
 
   const currentItems = getCurrentItems();
 
-  // Mock user data - in a real app this would come from authentication/API
+  // User data from connected wallet
   const userData = {
-    username: "ArtistEther",
-    displayName: "Digital Artist",
-    handle: "@artistether",
-    walletAddress: "0x742d35Cc6634C0532925a3b8D4C9db96590b5b8C",
-    ensName: "artistether.eth",
-    bio: "Digital artist exploring the intersection of technology and creativity. Creating unique NFTs that push the boundaries of digital art.",
-    joinedDate: "January 2024",
+    username: account?.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "",
+    displayName: "",
+    handle: "",
+    walletAddress: account?.address || "",
+    ensName: "",
+    bio: "",
+    joinedDate: "",
     totalWorks: submittedWorks.length,
     approvedWorks: approvedNfts.length,
     totalCollections: collections.length,
-    followers: 1247,
-    following: 892,
-    verified: true,
+    followers: 0,
+    following: 0,
+    verified: false,
     socialLinks: {
-      twitter: "https://twitter.com/artistether",
-      instagram: "https://instagram.com/artistether",
-      website: "https://artistether.com"
+      twitter: "",
+      instagram: "",
+      website: ""
     }
   };
 
@@ -97,68 +126,78 @@ const AccountsPage = () => {
       {/* Content Area */}
       <main className="py-12 px-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-7xl">
-          {/* Stats Summary */}
-          <div className="mb-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
-              <div className="text-3xl font-bold text-white mb-2">{currentItems.length}</div>
-              <div className="text-sm text-gray-400">{selectedTab}</div>
-            </div>
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
-              <div className="text-3xl font-bold text-green-400 mb-2">
-                {selectedTab === 'Approved NFTs' ? `${currentItems.reduce((sum, item) => sum + (item.price || 0), 0).toFixed(1)} ETH` : '—'}
-              </div>
-              <div className="text-sm text-gray-400">Total Value</div>
-            </div>
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
-              <div className="text-3xl font-bold text-blue-400 mb-2">{userData.followers}</div>
-              <div className="text-sm text-gray-400">Followers</div>
-            </div>
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
-              <div className="text-3xl font-bold text-purple-400 mb-2">{userData.totalCollections}</div>
-              <div className="text-sm text-gray-400">Collections</div>
-            </div>
-          </div>
-
-          {/* Works Grid/List */}
-          {currentItems.length > 0 ? (
-            <div className={
-              viewMode === 'grid' 
-                ? "grid auto-rows-[220px] gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-                : "space-y-6"
-            }>
-              {currentItems.map((item, index) => (
-                <WorkItem 
-                  key={`${selectedTab}-${item.id}`}
-                  item={item} 
-                  index={index}
-                  tab={selectedTab}
-                  viewMode={viewMode}
-                />
-              ))}
+          {loading ? (
+            <div className="text-center py-24">
+              <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500 mx-auto mb-8"></div>
+              <h3 className="text-2xl font-semibold text-white mb-4">Loading your space...</h3>
+              <p className="text-gray-400 max-w-lg mx-auto">Fetching your artworks and collections from the blockchain.</p>
             </div>
           ) : (
-            /* Enhanced Empty State */
-            <div className="text-center py-24">
-              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-gray-800">
-                <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <>
+              {/* Stats Summary */}
+              <div className="mb-12 grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
+                  <div className="text-3xl font-bold text-white mb-2">{currentItems.length}</div>
+                  <div className="text-sm text-gray-400">{selectedTab}</div>
+                </div>
+                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
+                  <div className="text-3xl font-bold text-green-400 mb-2">
+                    {selectedTab === 'Approved NFTs' ? `${currentItems.reduce((sum, item) => sum + (item.price || 0), 0).toFixed(1)} ETH` : '—'}
+                  </div>
+                  <div className="text-sm text-gray-400">Total Value</div>
+                </div>
+                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
+                  <div className="text-3xl font-bold text-blue-400 mb-2">{userData.followers}</div>
+                  <div className="text-sm text-gray-400">Followers</div>
+                </div>
+                <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-800/50 hover:border-gray-700/50 transition-all">
+                  <div className="text-3xl font-bold text-purple-400 mb-2">{userData.totalCollections}</div>
+                  <div className="text-sm text-gray-400">Collections</div>
+                </div>
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
-                No {selectedTab.toLowerCase()} yet
-              </h3>
-              <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
-                {selectedTab === 'Submitted Works' 
-                  ? 'Start your creative journey by submitting your first artwork to the platform.' 
-                  : selectedTab === 'Approved NFTs'
-                  ? 'Your approved artworks will appear here once they become NFTs.'
-                  : 'Create your first collection to organize your NFTs.'
-                }
-              </p>
-              <button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg font-medium transition-all text-lg">
-                {selectedTab === 'Submitted Works' ? 'Submit Artwork' : 'Create Collection'}
-              </button>
-            </div>
+
+              {/* Works Grid/List */}
+              {currentItems.length > 0 ? (
+                <div className={
+                  viewMode === 'grid' 
+                    ? "grid auto-rows-[220px] gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+                    : "space-y-6"
+                }>
+                  {currentItems.map((item, index) => (
+                    <WorkItem 
+                      key={`${selectedTab}-${item.id}`}
+                      item={item} 
+                      index={index}
+                      tab={selectedTab}
+                      viewMode={viewMode}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* Enhanced Empty State */
+                <div className="text-center py-24">
+                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-gray-800">
+                    <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-semibold text-white mb-4">
+                    No {selectedTab.toLowerCase()} yet
+                  </h3>
+                  <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+                    {selectedTab === 'Submitted Works' 
+                      ? 'Start your creative journey by submitting your first artwork to the platform.' 
+                      : selectedTab === 'Approved NFTs'
+                      ? 'Your approved artworks will appear here once they become NFTs.'
+                      : 'Create your first collection to organize your NFTs.'
+                    }
+                  </p>
+                  <button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg font-medium transition-all text-lg">
+                    {selectedTab === 'Submitted Works' ? 'Submit Artwork' : 'Create Collection'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
