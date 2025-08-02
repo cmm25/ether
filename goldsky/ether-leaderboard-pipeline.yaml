@@ -1,4 +1,3 @@
-# goldsky/ether-leaderboard-pipeline.yaml
 name: ether-leaderboard-pipeline
 apiVersion: 3
 resource_size: s

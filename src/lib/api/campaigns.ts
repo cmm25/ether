@@ -1,9 +1,5 @@
 import { Campaign, CampaignSubmission, LeaderboardResponse, VotingResponse, CampaignResponse } from '../../types/campaigns';
 
-// Database connection - Goldsky Hosted PostgreSQL provides this automatically
-// No manual configuration needed - connection string provided after pipeline deployment
-
-// API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 /**

@@ -46,14 +46,14 @@ contract GalleryNFT is ERC721URIStorage, ERC721Burnable, ReentrancyGuard, Pausab
 
     function mintNFT(
         address to,
-        string memory tokenURI,
+        string memory _tokenURI,
         uint256 campaignId,
         uint256 artworkId,
         address originalArtist,
         uint256 votesReceived
     ) external onlyAuthorizedMinter nonReentrant whenNotPaused returns (uint256) {
         require(to != address(0), "Cannot mint to zero address");
-        require(bytes(tokenURI).length > 0, "Token URI cannot be empty");
+        require(bytes(_tokenURI).length > 0, "Token URI cannot be empty");
         require(originalArtist != address(0), "Invalid artist address");
         require(!campaignArtworkMinted[campaignId][artworkId], "NFT already minted for this artwork");
 
@@ -72,9 +72,9 @@ contract GalleryNFT is ERC721URIStorage, ERC721Burnable, ReentrancyGuard, Pausab
         });
 
         _mint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, _tokenURI);
         
-        emit NFTMinted(tokenId, to, tokenURI, campaignId, artworkId);
+        emit NFTMinted(tokenId, to, _tokenURI, campaignId, artworkId);
         return tokenId;
     }
 
@@ -94,7 +94,7 @@ contract GalleryNFT is ERC721URIStorage, ERC721Burnable, ReentrancyGuard, Pausab
         require(recipients.length <= 50, "Too many NFTs to mint at once");
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            mintNFT(
+            _mintSingleNFT(
                 recipients[i],
                 tokenURIs[i],
                 campaignIds[i],
@@ -103,6 +103,39 @@ contract GalleryNFT is ERC721URIStorage, ERC721Burnable, ReentrancyGuard, Pausab
                 votesReceived[i]
             );
         }
+    }
+
+    function _mintSingleNFT(
+        address to,
+        string memory _tokenURI,
+        uint256 campaignId,
+        uint256 artworkId,
+        address originalArtist,
+        uint256 votesReceived
+    ) internal {
+        require(to != address(0), "Cannot mint to zero address");
+        require(bytes(_tokenURI).length > 0, "Token URI cannot be empty");
+        require(originalArtist != address(0), "Invalid artist address");
+        require(!campaignArtworkMinted[campaignId][artworkId], "NFT already minted for this artwork");
+
+        uint256 tokenId = nextTokenId++;
+        
+        // Mark as minted
+        campaignArtworkMinted[campaignId][artworkId] = true;
+        
+        // Store metadata
+        nftMetadata[tokenId] = NFTMetadata({
+            campaignId: campaignId,
+            artworkId: artworkId,
+            originalArtist: originalArtist,
+            mintedAt: block.timestamp,
+            votes: votesReceived
+        });
+
+        _mint(to, tokenId);
+        _setTokenURI(tokenId, _tokenURI);
+        
+        emit NFTMinted(tokenId, to, _tokenURI, campaignId, artworkId);
     }
 
     function getNFTMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {

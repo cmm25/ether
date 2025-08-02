@@ -21,11 +21,13 @@ transforms:
         block_timestamp
       FROM ethereum_nft_transfers
       WHERE token_standard = 'ERC721'
+        AND token_address = '0xE24f6761009f89cAe3a9fCC7772fd3E4924e19eD'
     primary_key: transaction_hash
 
 sinks:
   nft_gallery:
-    type: hosted_postgres
+    type: postgres
     table: nft_transfers
     schema: ether_gallery
     from: nft_data
+    secretName: ether-database
