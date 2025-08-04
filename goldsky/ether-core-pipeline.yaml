@@ -3,135 +3,114 @@ apiVersion: 3
 resource_size: s
 
 sources:
-  # NFT Transfers (for minted artworks)
   ethereum_nft_transfers:
-    dataset_name: ethereum.token_transfers
-    version: 1.0.0
+    dataset_name: ethereum_sepolia.erc721_transfers
+    version: 1.2.0
     type: dataset
     start_at: latest
 
-  # Smart Contract Events (for voting)
   ethereum_logs:
-    dataset_name: ethereum.logs
+    dataset_name: ethereum_sepolia.raw_logs
     version: 1.0.0
     type: dataset
     start_at: latest
 
 transforms:
-  # 1. Filter and process NFT mints for campaign winners
   campaign_nft_mints:
     sql: |
       SELECT
         transaction_hash,
-        from_address,
-        to_address as winner_address,
-        token_address as nft_contract,
+        sender,
+        recipient as winner_address,
+        address as nft_contract,
         token_id,
         block_number,
         block_timestamp,
-        -- Extract campaign info from transaction data if embedded
         CASE
-          WHEN token_address = '0xE24f6761009f89cAe3a9fCC7772fd3E4924e19eD'
+          WHEN address = '0xE24f6761009f89cAe3a9fCC7772fd3E4924e19eD'
           THEN 'campaign_winner'
           ELSE 'regular_nft'
         END as nft_type
       FROM ethereum_nft_transfers
-      WHERE token_standard = 'ERC721'
-        AND from_address = '0x0000000000000000000000000000000000000000' -- Mints only
-        AND token_address = '0xE24f6761009f89cAe3a9fCC7772fd3E4924e19eD'
+      WHERE sender = '0x0000000000000000000000000000000000000000'
+        AND address = '0xE24f6761009f89cAe3a9fCC7772fd3E4924e19eD'
     primary_key: transaction_hash
 
-  # 2. Process voting events from your voting contract
   campaign_votes:
     sql: |
       SELECT
         transaction_hash,
         address as voting_contract,
-        -- Decode voting event parameters
-        SUBSTRING(topics[1], 3) as campaign_id_hex,
-        SUBSTRING(topics[2], 3) as submission_id_hex,
-        CONCAT('0x', SUBSTRING(topics[3], 27)) as voter_address,
-        -- Convert hex to readable format
-        CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
-        CAST(CONV(SUBSTRING(topics[2], 3), 16, 10) AS STRING) as submission_id,
+        SPLIT_INDEX(topics, ',', 1) as topic1,
+        SPLIT_INDEX(topics, ',', 2) as topic2,
+        SPLIT_INDEX(topics, ',', 3) as topic3,
         block_number,
         block_timestamp,
         log_index
       FROM ethereum_logs
       WHERE address = '0xD84125E5691da5C11d918552F4fC5B8835D074F3'
-        AND topics[0] = '0xf6ed5a0362706e33942c258dd867d1664e91a7653843a7c3459a857db97287ae'
-        AND ARRAY_SIZE(topics) >= 4
+        AND topics LIKE '0xf6ed5a0362706e33942c258dd867d1664e91a7653843a7c3459a857db97287ae%'
     primary_key: transaction_hash
 
-  # 3. Aggregate vote counts per submission
   vote_aggregations:
     sql: |
       SELECT
-        campaign_id,
-        submission_id,
+        'placeholder' as campaign_id,
+        'placeholder' as submission_id,
         COUNT(*) as total_votes,
-        COUNT(DISTINCT voter_address) as unique_voters,
+        COUNT(DISTINCT voting_contract) as unique_voters,
         MAX(block_timestamp) as last_vote_time,
-        -- Create a composite key for real-time updates
-        CONCAT(campaign_id, '_', submission_id) as campaign_submission_key
+        CONCAT('campaign_', CAST(block_number AS STRING)) as campaign_submission_key
       FROM campaign_votes
-      GROUP BY campaign_id, submission_id
+      GROUP BY voting_contract, block_number
     primary_key: campaign_submission_key
 
-  # 4. Campaign state changes (start/end events)
   campaign_lifecycle:
     sql: |
       SELECT
         transaction_hash,
-        SUBSTRING(topics[1], 3) as campaign_id_hex,
-        CAST(CONV(SUBSTRING(topics[1], 3), 16, 10) AS STRING) as campaign_id,
-        -- Decode event type (CampaignStarted, CampaignEnded, etc.)
+        address as campaign_contract,
+        SPLIT_INDEX(topics, ',', 0) as event_topic,
         CASE
-          WHEN topics[0] = '0x50ebbe8281f15d5d2cdd91b5c29b25ad253c4587660a7cadd4507c658dc7f9aa' THEN 'started'
-          WHEN topics[0] = '0x586eafeba77645f66f39a805c1aa506d2e3006da7d9b1f48801222ea9ea7ef16' THEN 'ended'
-          WHEN topics[0] = '0x5fa006001f7473b386c7bb4db093cb973ce5c895e51c3813bdbd723097d0349e' THEN 'winners_selected'
+          WHEN topics LIKE '0x50ebbe8281f15d5d2cdd91b5c29b25ad253c4587660a7cadd4507c658dc7f9aa%' THEN 'started'
+          WHEN topics LIKE '0x586eafeba77645f66f39a805c1aa506d2e3006da7d9b1f48801222ea9ea7ef16%' THEN 'ended'
+          WHEN topics LIKE '0x5fa006001f7473b386c7bb4db093cb973ce5c895e51c3813bdbd723097d0349e%' THEN 'winners_selected'
           ELSE 'unknown'
         END as event_type,
         block_number,
         block_timestamp
       FROM ethereum_logs
       WHERE address = '0x0769A45dc3CAeb1B3F311B8bb9c2C1e89ebF95Ba'
-        AND topics[0] IN (
-          '0x50ebbe8281f15d5d2cdd91b5c29b25ad253c4587660a7cadd4507c658dc7f9aa',
-          '0x586eafeba77645f66f39a805c1aa506d2e3006da7d9b1f48801222ea9ea7ef16',
-          '0x5fa006001f7473b386c7bb4db093cb973ce5c895e51c3813bdbd723097d0349e'
-        )
+        AND (topics LIKE '0x50ebbe8281f15d5d2cdd91b5c29b25ad253c4587660a7cadd4507c658dc7f9aa%'
+          OR topics LIKE '0x586eafeba77645f66f39a805c1aa506d2e3006da7d9b1f48801222ea9ea7ef16%'
+          OR topics LIKE '0x5fa006001f7473b386c7bb4db093cb973ce5c895e51c3813bdbd723097d0349e%')
     primary_key: transaction_hash
 
 sinks:
-  # Store NFT mints for winners
   nft_mints_sink:
     type: postgres
     table: campaign_nft_mints
     schema: ether_live
     from: campaign_nft_mints
-    secretName: ether-database
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
 
-  # Store real-time votes
   votes_sink:
     type: postgres
     table: campaign_votes
     schema: ether_live
     from: campaign_votes
-    secretName: ether-database
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
 
-  # Store vote aggregations for leaderboards
   vote_counts_sink:
     type: postgres
     table: vote_aggregations
     schema: ether_live
     from: vote_aggregations
-    secretName: ether-database
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
 
-  # Store campaign lifecycle events
   campaign_events_sink:
     type: postgres
     table: campaign_lifecycle
     schema: ether_live
     from: campaign_lifecycle
-    secretName: ether-database
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
