@@ -3,7 +3,6 @@ apiVersion: 3
 resource_size: s
 
 sources:
-  # Use the vote data from previous pipeline
   live_votes:
     dataset_name: ethereum_sepolia.raw_logs
     version: 1.0.0
@@ -11,91 +10,27 @@ sources:
     start_at: latest
 
 transforms:
-  # Real-time leaderboard calculation
-  live_leaderboard:
+  # Simplified vote storage without parsing
+  vote_events:
     sql: |
       SELECT
-        campaign_id,
-        submission_id,
-        COUNT(*) as vote_count,
-        COUNT(DISTINCT voter_address) as unique_voters,
-        -- Calculate ranking within campaign
-        ROW_NUMBER() OVER (
-          PARTITION BY campaign_id
-          ORDER BY COUNT(*) DESC, MIN(block_timestamp) ASC
-        ) as current_rank,
-        -- Determine if this submission is in top N (winners)
-        CASE
-          WHEN ROW_NUMBER() OVER (
-            PARTITION BY campaign_id
-            ORDER BY COUNT(*) DESC, MIN(block_timestamp) ASC
-          ) <= 5 THEN true
-          ELSE false
-        END as is_current_winner,
-        MAX(block_timestamp) as last_updated,
-        CONCAT(campaign_id, '_leaderboard') as leaderboard_key
-      FROM (
-        SELECT
-          SPLIT_INDEX(topics, ',', 1) as campaign_id,
-          SPLIT_INDEX(topics, ',', 2) as submission_id,
-          CONCAT('0x', SUBSTRING(SPLIT_INDEX(topics, ',', 3), -40)) as voter_address,
-          block_timestamp
-        FROM live_votes
-        WHERE address = '0xD84125E5691da5C11d918552F4fC5B8835D074F3'
-          AND topics LIKE '0xf6ed5a0362706e33942c258dd867d1664e91a7653843a7c3459a857db97287ae%'
-      ) vote_data
-      GROUP BY campaign_id, submission_id
-    primary_key: leaderboard_key
-
-  # Campaign winner detection logic
-  winner_detection:
-    sql: |
-      SELECT
-        campaign_id,
-        submission_id,
-        vote_count,
-        current_rank,
-        winner_status_change,
-        last_updated,
-        status_key
-      FROM (
-        SELECT
-          campaign_id,
-          submission_id,
-          vote_count,
-          current_rank,
-          -- Flag when a submission becomes/stops being a winner
-          CASE
-            WHEN current_rank <= 5 AND LAG(current_rank, 1, 999) OVER (
-              PARTITION BY campaign_id, submission_id
-              ORDER BY last_updated
-            ) > 5 THEN 'became_winner'
-            WHEN current_rank > 5 AND LAG(current_rank, 1, 999) OVER (
-              PARTITION BY campaign_id, submission_id
-              ORDER BY last_updated
-            ) <= 5 THEN 'lost_winner_status'
-            ELSE 'no_change'
-          END as winner_status_change,
-          last_updated,
-          CONCAT(campaign_id, '_', submission_id, '_status') as status_key
-        FROM live_leaderboard
-      ) status_changes
-      WHERE winner_status_change <> 'no_change'
-    primary_key: status_key
+        transaction_hash,
+        address as voting_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        log_index,
+        CONCAT(address, '_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as event_key
+      FROM live_votes
+      WHERE address = '0xD84125E5691da5C11d918552F4fC5B8835D074F3'
+        AND topics LIKE '0xf6ed5a0362706e33942c258dd867d1664e91a7653843a7c3459a857db97287ae%'
+    primary_key: event_key
 
 sinks:
-  # Real-time leaderboard for frontend
-  leaderboard_sink:
+  # Store raw vote events
+  vote_events_sink:
     type: postgres
-    table: live_leaderboard
+    table: vote_events
     schema: ether_live
-    from: live_leaderboard
-    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
-
-  # Winner status changes for notifications
-  winner_status_sink:
-    type: postgres
-    table: winner_status_changes
-    schema: ether_live
-    from: winner_detection
+    from: vote_events
     secret_name: HOSTED_POSTGRES_CMDWV3QIO0
