@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Campaign, CampaignSubmission } from '../../../types/campaigns';
 import { getCampaignDetails, submitVote } from '../../../lib/api/campaigns';
+import { useRealTimeCampaign, useCampaignStatus } from '../../../hooks/useRealTimeCampaign';
 import RealTimeLeaderboard from '../../../components/campaigns/RealTimeLeaderboard';
 import AppLayout from '../../../components/Layout/AppLayout';
 
@@ -189,6 +190,10 @@ export default function CampaignDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'leaderboard'>('leaderboard');
   const [userAddress, setUserAddress] = useState<string>(''); // This would come from wallet connection
 
+  // Real-time data from all pipelines
+  const realTimeData = useRealTimeCampaign(campaignId, 1000);
+  const campaignStatus = useCampaignStatus(campaignId, 5000);
+
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
@@ -325,6 +330,58 @@ export default function CampaignDetailPage() {
               </span>
             </div>
 
+            {/* Real-time Pipeline Status */}
+            {(realTimeData.isEnded || campaignStatus.isEnded) && (
+              <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-xl border border-purple-500/30 p-6 mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
+                  <h3 className="text-white font-semibold">Campaign Ended - Processing Results</h3>
+                </div>
+                
+                {realTimeData.finalWinners.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-purple-400 font-medium mb-2">Final Winners</h4>
+                      <div className="space-y-2">
+                        {realTimeData.finalWinners.slice(0, 3).map((winner, index) => (
+                          <div key={winner.winner_key} className="flex items-center gap-3 text-sm">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                              index === 0 ? 'bg-yellow-500 text-black' :
+                              index === 1 ? 'bg-gray-400 text-black' :
+                              'bg-amber-600 text-white'
+                            }`}>
+                              {winner.final_rank}
+                            </div>
+                            <span className="text-gray-300">Submission {winner.submission_id.slice(0, 8)}...</span>
+                            <span className="text-purple-400">{winner.final_vote_count} votes</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-green-400 font-medium mb-2">NFT Minting Status</h4>
+                      <div className="space-y-2">
+                        {realTimeData.nftMints.slice(0, 3).map((mint) => (
+                          <div key={mint.transaction_hash} className="flex items-center gap-3 text-sm">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span className="text-gray-300">Token #{mint.token_id}</span>
+                            <span className="text-green-400">Minted</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {campaignStatus.endTimestamp && (
+                  <div className="mt-4 text-sm text-gray-400">
+                    Campaign ended: {new Date(campaignStatus.endTimestamp).toLocaleString()}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Campaign Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
               <div className="bg-gray-900/50 rounded-lg p-4 text-center">
@@ -332,8 +389,13 @@ export default function CampaignDetailPage() {
                 <div className="text-sm text-gray-400">Submissions</div>
               </div>
               <div className="bg-gray-900/50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-400">{campaign.totalVotes}</div>
-                <div className="text-sm text-gray-400">Total Votes</div>
+                <div className="text-2xl font-bold text-green-400">
+                  {realTimeData.voteData.length || campaign.totalVotes}
+                  {!realTimeData.isLoading && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full inline-block ml-2 animate-pulse"></div>
+                  )}
+                </div>
+                <div className="text-sm text-gray-400">Live Votes</div>
               </div>
               <div className="bg-gray-900/50 rounded-lg p-4 text-center">
                 <div className="text-lg font-bold text-yellow-400">{campaign.prize}</div>
@@ -348,6 +410,36 @@ export default function CampaignDetailPage() {
                 <div className="text-sm text-gray-400">Category</div>
               </div>
             </div>
+
+            {/* Real-time Leaderboard Preview */}
+            {realTimeData.leaderboard.length > 0 && !realTimeData.isLoading && (
+              <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-semibold">Current Top 3</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    Live Updates
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {realTimeData.leaderboard.slice(0, 3).map((entry, index) => (
+                    <div key={entry.submissionId} className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        index === 0 ? 'bg-yellow-500 text-black' :
+                        index === 1 ? 'bg-gray-400 text-black' :
+                        'bg-amber-600 text-white'
+                      }`}>
+                        {entry.rank}
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">Submission {entry.submissionId.slice(0, 8)}...</div>
+                        <div className="text-purple-400 text-sm">{entry.voteCount} votes</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Countdown Timer */}
             {campaign.status === 'active' && (
