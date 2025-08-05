@@ -21,7 +21,7 @@ transforms:
         log_index,
         CONCAT(address, '_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as event_key
       FROM live_votes
-      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+      WHERE address = '0x408B34694443394adbC7BcB6aEC2459B5b25a750'
     primary_key: event_key
 
 sinks:

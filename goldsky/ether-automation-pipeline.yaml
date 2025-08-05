@@ -21,7 +21,7 @@ transforms:
         'pending_processing' as automation_status,
         CONCAT('campaign_end_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as trigger_key
       FROM ethereum_logs
-      WHERE address = '0x8C59Cbe25A81911299d1a9a8257c71955C273730'
+      WHERE address = '0x00c426b68939E496e088e0BF4D5Ba7FCA2bD3c1F'
     primary_key: trigger_key
 
   final_winners:
@@ -35,7 +35,7 @@ transforms:
         'ready_for_minting' as mint_status,
         CONCAT('winner_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as winner_key
       FROM ethereum_logs
-      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+      WHERE address = '0x408B34694443394adbC7BcB6aEC2459B5b25a750'
     primary_key: winner_key
 
 sinks:

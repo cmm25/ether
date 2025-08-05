@@ -20,7 +20,7 @@ transforms:
         block_number,
         block_timestamp
       FROM ethereum_nft_transfers
-      WHERE address = '0x8B5d0f5C7DC11Db8E35Db844cfAe66066CBD39d4'
+      WHERE address = '0x9344d4a53fA2DFA02a52b4c57988488dFBCdE8c1'
     primary_key: transaction_hash
 
 sinks:

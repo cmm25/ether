@@ -28,7 +28,7 @@ transforms:
         block_timestamp
       FROM ethereum_nft_transfers
       WHERE sender = '0x0000000000000000000000000000000000000000'
-        AND address = '0x8B5d0f5C7DC11Db8E35Db844cfAe66066CBD39d4'
+        AND address = '0x9344d4a53fA2DFA02a52b4c57988488dFBCdE8c1'
     primary_key: transaction_hash
 
   campaign_votes:
@@ -41,7 +41,7 @@ transforms:
         block_timestamp,
         log_index
       FROM ethereum_logs
-      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+      WHERE address = '0x408B34694443394adbC7BcB6aEC2459B5b25a750'
     primary_key: transaction_hash
 
   campaign_lifecycle:
@@ -53,7 +53,7 @@ transforms:
         block_number,
         block_timestamp
       FROM ethereum_logs
-      WHERE address = '0x8C59Cbe25A81911299d1a9a8257c71955C273730'
+      WHERE address = '0x00c426b68939E496e088e0BF4D5Ba7FCA2bD3c1F'
     primary_key: transaction_hash
 
   artwork_submissions:
@@ -66,7 +66,7 @@ transforms:
         block_timestamp,
         log_index
       FROM ethereum_logs
-      WHERE address = '0x7852Ae1D0A5673f5ee47E5900a48cbE7438A8De2'
+      WHERE address = '0xd11f3b7A517490a4d0a8873Cb67cCA25E280893d'
     primary_key: transaction_hash
 
 sinks:
