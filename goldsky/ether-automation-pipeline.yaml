@@ -1,0 +1,54 @@
+name: ether-automation-pipeline
+apiVersion: 3
+resource_size: s
+
+sources:
+  ethereum_logs:
+    dataset_name: ethereum_sepolia.raw_logs
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  campaign_end_triggers:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as campaign_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        'pending_processing' as automation_status,
+        CONCAT('campaign_end_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as trigger_key
+      FROM ethereum_logs
+      WHERE address = '0x8C59Cbe25A81911299d1a9a8257c71955C273730'
+    primary_key: trigger_key
+
+  final_winners:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as voting_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        'ready_for_minting' as mint_status,
+        CONCAT('winner_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as winner_key
+      FROM ethereum_logs
+      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+    primary_key: winner_key
+
+sinks:
+  automation_triggers_sink:
+    type: postgres
+    table: campaign_automation_triggers
+    schema: ether_live
+    from: campaign_end_triggers
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
+
+  final_winners_sink:
+    type: postgres
+    table: campaign_final_winners
+    schema: ether_live
+    from: final_winners
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0

@@ -1,0 +1,32 @@
+name: ether-nft-pipeline
+apiVersion: 3
+
+sources:
+  ethereum_nft_transfers:
+    dataset_name: ethereum_sepolia.erc721_transfers
+    version: 1.2.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  nft_data:
+    sql: |
+      SELECT 
+        transaction_hash,
+        sender,
+        recipient,
+        address,
+        token_id,
+        block_number,
+        block_timestamp
+      FROM ethereum_nft_transfers
+      WHERE address = '0x8B5d0f5C7DC11Db8E35Db844cfAe66066CBD39d4'
+    primary_key: transaction_hash
+
+sinks:
+  nft_gallery:
+    type: postgres
+    table: nft_transfers
+    schema: ether_gallery
+    from: nft_data
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0

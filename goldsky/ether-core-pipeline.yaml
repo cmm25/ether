@@ -1,0 +1,99 @@
+name: ether-core-pipeline
+apiVersion: 3
+resource_size: s
+
+sources:
+  ethereum_nft_transfers:
+    dataset_name: ethereum_sepolia.erc721_transfers
+    version: 1.2.0
+    type: dataset
+    start_at: latest
+
+  ethereum_logs:
+    dataset_name: ethereum_sepolia.raw_logs
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  campaign_nft_mints:
+    sql: |
+      SELECT
+        transaction_hash,
+        sender,
+        recipient as winner_address,
+        address as nft_contract,
+        token_id,
+        block_number,
+        block_timestamp
+      FROM ethereum_nft_transfers
+      WHERE sender = '0x0000000000000000000000000000000000000000'
+        AND address = '0x8B5d0f5C7DC11Db8E35Db844cfAe66066CBD39d4'
+    primary_key: transaction_hash
+
+  campaign_votes:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as voting_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        log_index
+      FROM ethereum_logs
+      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+    primary_key: transaction_hash
+
+  campaign_lifecycle:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as campaign_contract,
+        topics,
+        block_number,
+        block_timestamp
+      FROM ethereum_logs
+      WHERE address = '0x8C59Cbe25A81911299d1a9a8257c71955C273730'
+    primary_key: transaction_hash
+
+  artwork_submissions:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as submission_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        log_index
+      FROM ethereum_logs
+      WHERE address = '0x7852Ae1D0A5673f5ee47E5900a48cbE7438A8De2'
+    primary_key: transaction_hash
+
+sinks:
+  nft_mints_sink:
+    type: postgres
+    table: campaign_nft_mints
+    schema: ether_live
+    from: campaign_nft_mints
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
+
+  votes_sink:
+    type: postgres
+    table: campaign_votes
+    schema: ether_live
+    from: campaign_votes
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
+
+  campaign_events_sink:
+    type: postgres
+    table: campaign_lifecycle
+    schema: ether_live
+    from: campaign_lifecycle
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
+
+  submissions_sink:
+    type: postgres
+    table: artwork_submissions
+    schema: ether_live
+    from: artwork_submissions
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0

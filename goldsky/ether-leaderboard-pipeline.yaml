@@ -1,0 +1,33 @@
+name: ether-leaderboard-pipeline
+apiVersion: 3
+resource_size: s
+
+sources:
+  live_votes:
+    dataset_name: ethereum_sepolia.raw_logs
+    version: 1.0.0
+    type: dataset
+    start_at: latest
+
+transforms:
+  vote_events:
+    sql: |
+      SELECT
+        transaction_hash,
+        address as voting_contract,
+        topics,
+        block_number,
+        block_timestamp,
+        log_index,
+        CONCAT(address, '_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as event_key
+      FROM live_votes
+      WHERE address = '0xd411763bc25C7c9a4A20cd56baB6245Ef955Aa54'
+    primary_key: event_key
+
+sinks:
+  vote_events_sink:
+    type: postgres
+    table: vote_events
+    schema: ether_live
+    from: vote_events
+    secret_name: HOSTED_POSTGRES_CMDWV3QIO0
