@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { campaigns, votingRounds } from '../data/campaignsData';
 import { Campaign, VotingRound, CampaignSubmission } from '../types/campaigns';
 import CreateCampaignForm from '../components/CreateCampaignForm';
+import { useCampaigns } from '../hooks/useCampaigns';
+import { useWallet } from '../hooks/useWallet';
 
 const CountdownTimer = ({ endDate }: { endDate: string }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -239,40 +240,39 @@ const VotingRoundCard = ({ round, onVote }: { round: VotingRound; onVote: (submi
 
 export default function CampaignsPage() {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'voting'>('campaigns');
-  const [campaignData, setCampaignData] = useState(campaigns);
-  const [votingData, setVotingData] = useState(votingRounds);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const handleVote = (submissionId: string) => {
-    setCampaignData(prev => prev.map(campaign => ({
-      ...campaign,
-      submissions: campaign.submissions.map(sub => 
-        sub.id === submissionId 
-          ? { ...sub, votes: sub.votes + 1, userVoted: true }
-          : sub
-      )
-    })));
+  // Use blockchain data instead of mock data
+  const { 
+    campaigns: campaignData, 
+    isLoading, 
+    error,
+    getActiveCampaigns,
+    getUpcomingCampaigns,
+    getEndedCampaigns,
+    fetchCampaigns
+  } = useCampaigns();
+  
+  const { isConnected } = useWallet();
 
-    setVotingData(prev => prev.map(round => ({
-      ...round,
-      submissions: round.submissions.map(sub => 
-        sub.id === submissionId 
-          ? { ...sub, votes: sub.votes + 1, userVoted: true }
-          : sub
-      )
-    })));
+  const handleVote = (submissionId: string) => {
+    // TODO: Implement blockchain voting
+    console.log('Voting for submission:', submissionId);
   };
 
   const handleCreateCampaign = (newCampaign: Campaign) => {
-    setCampaignData(prev => [...prev, newCampaign]);
+    // Campaign creation is handled by the blockchain service
+    // The campaigns list will be automatically refreshed
+    console.log('Campaign created:', newCampaign);
   };
 
-  const activeCampaigns = campaignData.filter(c => c.status === 'active');
-  const upcomingCampaigns = campaignData.filter(c => c.status === 'upcoming');
-  const endedCampaigns = campaignData.filter(c => c.status === 'ended');
+  const activeCampaigns = getActiveCampaigns();
+  const upcomingCampaigns = getUpcomingCampaigns();
+  const endedCampaigns = getEndedCampaigns();
 
-  const activeVotingRounds = votingData.filter(r => r.status === 'active');
-  const upcomingVotingRounds = votingData.filter(r => r.status === 'upcoming');
+  // For now, use empty arrays for voting rounds until voting is implemented
+  const activeVotingRounds: VotingRound[] = [];
+  const upcomingVotingRounds: VotingRound[] = [];
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -318,37 +318,80 @@ export default function CampaignsPage() {
 
         {activeTab === 'campaigns' ? (
           <div className="space-y-8">
-            {activeCampaigns.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 text-green-400">Active Campaigns</h2>
-                <div className="space-y-6">
-                  {activeCampaigns.map(campaign => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-400">Loading campaigns from blockchain...</p>
               </div>
-            )}
+            ) : error ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Error Loading Campaigns</h3>
+                <p className="text-red-400 mb-4">{error}</p>
+                <button
+                  onClick={fetchCampaigns}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : (
+              <>
+                {activeCampaigns.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4 text-green-400">Active Campaigns</h2>
+                    <div className="space-y-6">
+                      {activeCampaigns.map(campaign => (
+                        <CampaignCard key={campaign.id} campaign={campaign} />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {upcomingCampaigns.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 text-blue-400">Upcoming Campaigns</h2>
-                <div className="space-y-6">
-                  {upcomingCampaigns.map(campaign => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              </div>
-            )}
+                {upcomingCampaigns.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4 text-blue-400">Upcoming Campaigns</h2>
+                    <div className="space-y-6">
+                      {upcomingCampaigns.map(campaign => (
+                        <CampaignCard key={campaign.id} campaign={campaign} />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {endedCampaigns.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4 text-gray-400">Past Campaigns</h2>
-                <div className="space-y-6">
-                  {endedCampaigns.map(campaign => (
-                    <CampaignCard key={campaign.id} campaign={campaign} />
-                  ))}
-                </div>
-              </div>
+                {endedCampaigns.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4 text-gray-400">Past Campaigns</h2>
+                    <div className="space-y-6">
+                      {endedCampaigns.map(campaign => (
+                        <CampaignCard key={campaign.id} campaign={campaign} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {campaignData.length === 0 && !isLoading && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">No Campaigns Yet</h3>
+                    <p className="text-gray-400 mb-4">Be the first to create a campaign on the blockchain!</p>
+                    <button
+                      onClick={() => setShowCreateForm(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all font-medium"
+                    >
+                      Create First Campaign
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : (

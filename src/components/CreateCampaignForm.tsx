@@ -1,20 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { X, AlertTriangle, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, AlertTriangle, Zap, Wallet } from 'lucide-react';
 import type { Campaign } from '../types/campaigns';
+import { useWallet } from '../hooks/useWallet';
+import { useCampaigns } from '../hooks/useCampaigns';
 
 interface CreateCampaignFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (campaignData: Campaign) => void;
 }
-
-const CREATION_FEE = {
-  amount: 0.05,
-  currency: 'ETH',
-  usdValue: 125 // Mock USD value
-};
 
 export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: CreateCampaignFormProps) {
   const [formData, setFormData] = useState({
@@ -25,8 +21,43 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
     startDate: '',
     endDate: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<'form' | 'confirm' | 'payment'>('form');
+  const [creationFee, setCreationFee] = useState('0.001');
+  const [transactionHash, setTransactionHash] = useState<string>('');
+
+  const { isConnected, address, connectWallet, isConnecting, error: walletError } = useWallet();
+  const { createCampaign, isCreating, getCreationFee } = useCampaigns();
+
+  // Set default dates when form opens
+  useEffect(() => {
+    if (isOpen) {
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Tomorrow
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Next week
+
+      setFormData(prev => ({
+        ...prev,
+        startDate: tomorrow.toISOString().split('T')[0], // YYYY-MM-DD format
+        endDate: nextWeek.toISOString().split('T')[0],   // YYYY-MM-DD format
+      }));
+    }
+  }, [isOpen]);
+
+  // Load creation fee on mount
+  useEffect(() => {
+    const loadCreationFee = async () => {
+      try {
+        const fee = await getCreationFee();
+        setCreationFee(fee);
+      } catch (error) {
+        console.error('Error loading creation fee:', error);
+      }
+    };
+
+    if (isOpen) {
+      loadCreationFee();
+    }
+  }, [isOpen, getCreationFee]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -35,7 +66,11 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('confirm');
+    if (!isConnected) {
+      setStep('payment'); // Go to wallet connection step
+    } else {
+      setStep('confirm');
+    }
   };
 
   const handleConfirm = () => {
@@ -43,28 +78,47 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
   };
 
   const handlePayment = async () => {
-    setIsSubmitting(true);
+    if (!isConnected) {
+      // Connect wallet first
+      await connectWallet();
+      return;
+    }
 
-    // Simulate blockchain transaction
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    try {
+      const result = await createCampaign(formData);
 
-    // Create campaign
-    const newCampaign = {
-      id: `camp-${Date.now()}`,
-      ...formData,
-      status: 'upcoming' as const,
-      totalSubmissions: 0,
-      totalVotes: 0,
-      prize: 'Featured in Gallery',
-      category: formData.category,
-      submissions: []
-    };
+      if (result.success) {
+        setTransactionHash(result.transactionHash || '');
 
-    onSubmit(newCampaign);
-    setIsSubmitting(false);
-    onClose();
+        // Create campaign object for UI update
+        const newCampaign = {
+          id: `camp-${Date.now()}`,
+          ...formData,
+          status: 'upcoming' as const,
+          totalSubmissions: 0,
+          totalVotes: 0,
+          prize: 'Featured in Gallery',
+          category: formData.category,
+          submissions: [],
+          transactionHash: result.transactionHash,
+          votingPeriodHours: Math.floor((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60)),
+          winnersCount: 3,
+          requiresApproval: false,
+        };
 
-    // Reset form
+        onSubmit(newCampaign);
+        onClose();
+        resetForm();
+      } else {
+        // Handle error - could show error message in UI
+        console.error('Campaign creation failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+    }
+  };
+
+  const resetForm = () => {
     setFormData({
       title: '',
       description: '',
@@ -74,6 +128,7 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
       endDate: ''
     });
     setStep('form');
+    setTransactionHash('');
   };
 
   const isFormValid = formData.title.trim() && formData.description.trim() && formData.category && formData.startDate && formData.endDate;
@@ -185,11 +240,36 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
               <div className="flex items-center justify-between bg-gray-800/50 rounded-lg p-3">
                 <span className="text-white font-medium">Creation Fee:</span>
                 <div className="text-right">
-                  <div className="text-amber-400 font-bold">{CREATION_FEE.amount} {CREATION_FEE.currency}</div>
-                  <div className="text-gray-400 text-sm">≈ ${CREATION_FEE.usdValue}</div>
+                  <div className="text-amber-400 font-bold">{creationFee} ETH</div>
+                  <div className="text-gray-400 text-sm">≈ ${(parseFloat(creationFee) * 3000).toFixed(0)}</div>
                 </div>
               </div>
             </div>
+
+            {/* Wallet Connection Status */}
+            {!isConnected && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="text-blue-400" size={20} />
+                  <h3 className="text-blue-400 font-medium">Wallet Required</h3>
+                </div>
+                <p className="text-gray-300 text-sm">
+                  You need to connect your wallet to create a campaign. Click continue to connect your wallet.
+                </p>
+              </div>
+            )}
+
+            {isConnected && address && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="text-green-400" size={20} />
+                  <h3 className="text-green-400 font-medium">Wallet Connected</h3>
+                </div>
+                <p className="text-gray-300 text-sm">
+                  Connected to: {address.slice(0, 6)}...{address.slice(-4)}
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -252,67 +332,110 @@ export default function CreateCampaignForm({ isOpen, onClose, onSubmit }: Create
 
         {step === 'payment' && (
           <div className="p-6 space-y-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Pay Creation Fee</h3>
-              <p className="text-gray-400">Complete the payment to create your campaign</p>
-            </div>
+            {!isConnected ? (
+              // Wallet Connection UI
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wallet className="w-8 h-8 text-blue-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Connect Wallet</h3>
+                <p className="text-gray-400 mb-6">Connect your wallet to create a campaign</p>
 
-            <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Campaign Creation</span>
-                <span className="text-white">{CREATION_FEE.amount} {CREATION_FEE.currency}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Gas Fee (estimated)</span>
-                <span className="text-white">0.002 ETH</span>
-              </div>
-              <div className="border-t border-gray-700 pt-3">
-                <div className="flex justify-between font-bold">
-                  <span className="text-white">Total</span>
-                  <div className="text-right">
-                    <div className="text-amber-400">{CREATION_FEE.amount + 0.002} ETH</div>
-                    <div className="text-gray-400 text-sm">≈ ${CREATION_FEE.usdValue + 5}</div>
+                {walletError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
+                    <p className="text-red-400 text-sm">{walletError}</p>
                   </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep('confirm')}
+                    className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={connectWallet}
+                    disabled={isConnecting}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium disabled:opacity-50"
+                  >
+                    {isConnecting ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Connecting...
+                      </div>
+                    ) : (
+                      'Connect Wallet'
+                    )}
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="text-blue-400" size={16} />
-                <span className="text-blue-400 text-sm font-medium">Gasless Transaction</span>
-              </div>
-              <p className="text-gray-300 text-sm">
-                This transaction will be executed via Sequence wallet with gasless technology.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setStep('confirm')}
-                disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
-                Back
-              </button>
-              <button
-                onClick={handlePayment}
-                disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all font-medium disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                    Processing...
+            ) : (
+              // Payment UI
+              <>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-8 h-8 text-amber-400" />
                   </div>
-                ) : (
-                  'Pay & Create Campaign'
-                )}
-              </button>
-            </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Pay Creation Fee</h3>
+                  <p className="text-gray-400">Complete the payment to create your campaign</p>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Campaign Creation</span>
+                    <span className="text-white">{creationFee} ETH</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Gas Fee (estimated)</span>
+                    <span className="text-white">0.002 ETH</span>
+                  </div>
+                  <div className="border-t border-gray-700 pt-3">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-white">Total</span>
+                      <div className="text-right">
+                        <div className="text-amber-400">{(parseFloat(creationFee) + 0.002).toFixed(4)} ETH</div>
+                        <div className="text-gray-400 text-sm">≈ ${((parseFloat(creationFee) + 0.002) * 3000).toFixed(0)}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wallet className="text-green-400" size={16} />
+                    <span className="text-green-400 text-sm font-medium">Wallet Connected</span>
+                  </div>
+                  <p className="text-gray-300 text-sm">
+                    Connected to: {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep('confirm')}
+                    disabled={isCreating}
+                    className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handlePayment}
+                    disabled={isCreating}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all font-medium disabled:opacity-50"
+                  >
+                    {isCreating ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                        Creating Campaign...
+                      </div>
+                    ) : (
+                      'Pay & Create Campaign'
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
