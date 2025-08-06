@@ -35,9 +35,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const campaignData = await request.json();
-    
-    // In a real implementation, this would save to database
-    // For now, we'll just return the data with a generated ID
     const newCampaign = {
       id: `camp-${Date.now()}`,
       ...campaignData,
