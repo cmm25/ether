@@ -1,5 +1,3 @@
-const PINATA_API_KEY = process.env.NEXT_PUBLIC_IPFS_API_KEY!;
-const PINATA_SECRET_KEY = process.env.NEXT_PUBLIC_IPFS_API_SECRET!;
 const PINATA_JWT = process.env.NEXT_PUBLIC_IPFS_JWT!;
 
 export interface IPFSUploadResult {

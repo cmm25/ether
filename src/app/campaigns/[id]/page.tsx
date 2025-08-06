@@ -211,8 +211,8 @@ export default function CampaignDetailPage() {
 
   const handleVote = async (submissionId: string) => {
     if (!isConnected || !account || !address) {
-      // Handle wallet connection
-      alert('Please connect your wallet to vote');
+      // Handle wallet connection - user will see the UI feedback
+      console.log('Wallet not connected for voting');
       return;
     }
 
@@ -248,13 +248,13 @@ export default function CampaignDetailPage() {
           };
         });
         
-        alert('Vote submitted successfully!');
+        // Vote submitted successfully - no alert needed
+        console.log('Vote submitted successfully!');
       } else {
-        alert(result.error || 'Failed to submit vote');
+        console.error('Vote submission failed:', result.error);
       }
     } catch (error) {
       console.error('Error voting:', error);
-      alert('Failed to submit vote');
     }
   };
 

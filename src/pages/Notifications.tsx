@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { allNotifications } from '../data/notificationsData';
-import { Notification } from '../types/notifications';
+import { getNotifications } from '../data/notificationsData';
+import { Notification } from '../lib/blockchain/notificationService';
+import { useWallet } from '../hooks/useWallet';
+import { useNotifications } from '../contexts/NotificationContext';
 import Link from 'next/link';
 
 const formatDate = (timestamp: string): string => {
@@ -16,17 +18,32 @@ const formatDate = (timestamp: string): string => {
   return date.toLocaleDateString();
 };
 
-const NotificationIcon = ({ type }: { type: 'artwork' | 'voting' }) => (
-  <div className={`p-2 rounded-full ${type === 'artwork' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
-    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-      {type === 'artwork' ? (
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      ) : (
-        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-      )}
-    </svg>
-  </div>
-);
+const NotificationIcon = ({ type }: { type: 'artwork' | 'voting' | 'campaign' | 'nft' }) => {
+  const getIconConfig = () => {
+    switch (type) {
+      case 'artwork':
+        return { bg: 'bg-purple-500/20 text-purple-400', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' };
+      case 'voting':
+        return { bg: 'bg-green-500/20 text-green-400', icon: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' };
+      case 'campaign':
+        return { bg: 'bg-blue-500/20 text-blue-400', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z' };
+      case 'nft':
+        return { bg: 'bg-yellow-500/20 text-yellow-400', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' };
+      default:
+        return { bg: 'bg-gray-500/20 text-gray-400', icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z' };
+    }
+  };
+
+  const { bg, icon } = getIconConfig();
+
+  return (
+    <div className={`p-2 rounded-full ${bg}`}>
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d={icon} />
+      </svg>
+    </div>
+  );
+};
 
 const NotificationActions = ({ notification }: { notification: Notification }) => (
   <div className="flex gap-3">
@@ -41,10 +58,32 @@ const NotificationActions = ({ notification }: { notification: Notification }) =
         View Artwork
       </Link>
     )}
-    {notification.details?.sessionId && (
+    {notification.details?.campaignId !== undefined && (
+      <Link 
+        href={`/campaigns/${notification.details.campaignId}`}
+        className="inline-flex items-center gap-1 text-green-400 text-sm hover:text-green-300 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 11H7v9h2v-9zm4-4H11v13h2V7zm4-4H15v17h2V3z" />
+        </svg>
+        View Campaign
+      </Link>
+    )}
+    {notification.type === 'voting' && !notification.details?.campaignId && (
+      <Link 
+        href="/campaigns" 
+        className="inline-flex items-center gap-1 text-green-400 text-sm hover:text-green-300 transition-colors"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 11H7v9h2v-9zm4-4H11v13h2V7zm4-4H15v17h2V3z" />
+        </svg>
+        View Campaigns
+      </Link>
+    )}
+    {notification.type === 'nft' && (
       <Link 
         href="/" 
-        className="inline-flex items-center gap-1 text-green-400 text-sm hover:text-green-300 transition-colors"
+        className="inline-flex items-center gap-1 text-yellow-400 text-sm hover:text-yellow-300 transition-colors"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
           <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
@@ -110,17 +149,7 @@ const EmptyState = () => (
 );
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(allNotifications);
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   return (
     <div className="min-h-screen bg-black text-white">

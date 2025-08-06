@@ -2,6 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useActiveWallet } from 'thirdweb/react';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface SidebarProps {
   className?: string;
@@ -22,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const router = useRouter();
   const activeWallet = useActiveWallet();
+  const { unreadCount } = useNotifications();
 
   const handleLogout = async () => {
     try {
@@ -91,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Notifications */}
         <button
-          className="w-14 h-14 bg-transparent border-2 border-transparent rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 text-gray-400 hover:border-purple-500 hover:text-white hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-1 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 group"
+          className="w-14 h-14 bg-transparent border-2 border-transparent rounded-xl flex items-center justify-center cursor-pointer transition-all duration-300 text-gray-400 hover:border-purple-500 hover:text-white hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-1 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 group relative"
           title="Notifications"
           onClick={() => {
             router.push('/notifications');
@@ -102,6 +104,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current transition-transform duration-300 group-hover:scale-110">
             <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
           </svg>
+          {/* Notification Badge */}
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+              <span className="text-white text-xs font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            </div>
+          )}
         </button>
 
         {/* User Profile - Last */}
