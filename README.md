@@ -1,4 +1,4 @@
-# Ether - Decentralized Art Platform
+# Ether - Decentralized Art Platform.
 
 A comprehensive blockchain-based platform for digital art campaigns, voting, and NFT minting built on Ethereum.
 
@@ -193,18 +193,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - **Live Demo**: [Coming Soon]
-- **Documentation**: [GitHub Wiki]
-- **Discord**: [Community Server]
-- **Twitter**: [@EtherPlatform]
-
-## 🙏 Acknowledgments
-
-- Ethereum Foundation for blockchain infrastructure
-- Thirdweb for Web3 development tools
-- Pinata for IPFS storage solutions
-- Supabase for backend services
-- Next.js team for the amazing framework
-
 ---
 
 **Built with ❤️ for the decentralized art community**
