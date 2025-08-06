@@ -7,6 +7,7 @@ import { Campaign, CampaignSubmission } from '../../../types/campaigns';
 import { getCampaignDetails, submitVote } from '../../../lib/api/campaigns';
 import RealTimeLeaderboard from '../../../components/campaigns/RealTimeLeaderboard';
 import AppLayout from '../../../components/Layout/AppLayout';
+import { useWallet } from '../../../hooks/useWallet';
 
 const CountdownTimer = ({ endDate }: { endDate: string }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -182,12 +183,12 @@ export default function CampaignDetailPage() {
   const params = useParams();
   const router = useRouter();
   const campaignId = params.id as string;
+  const { isConnected, address, account, connectWallet } = useWallet();
   
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'leaderboard'>('leaderboard');
-  const [userAddress, setUserAddress] = useState<string>(''); // This would come from wallet connection
 
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -209,14 +210,30 @@ export default function CampaignDetailPage() {
   }, [campaignId]);
 
   const handleVote = async (submissionId: string) => {
-    if (!userAddress) {
+    if (!isConnected || !account || !address) {
       // Handle wallet connection
       alert('Please connect your wallet to vote');
       return;
     }
 
     try {
-      const result = await submitVote(campaignId, submissionId, userAddress);
+      // Import voting service
+      const VotingService = (await import('../../../lib/blockchain/votingService')).default;
+
+      // Extract artwork ID from submission ID (assuming format "artwork-{id}")
+      const artworkId = parseInt(submissionId.replace('artwork-', ''));
+      if (isNaN(artworkId)) {
+        alert('Invalid submission ID');
+        return;
+      }
+
+      // Submit vote to blockchain
+      const result = await VotingService.voteForArtwork(
+        account,
+        parseInt(campaignId),
+        artworkId
+      );
+
       if (result.success) {
         // Update local state optimistically
         setCampaign(prev => {
@@ -230,6 +247,8 @@ export default function CampaignDetailPage() {
             )
           };
         });
+        
+        alert('Vote submitted successfully!');
       } else {
         alert(result.error || 'Failed to submit vote');
       }
@@ -413,7 +432,7 @@ export default function CampaignDetailPage() {
               campaignId={campaignId}
               maxWinners={campaign.winnersCount}
               onVote={handleVote}
-              userAddress={userAddress}
+              userAddress={address}
             />
           )}
 
@@ -425,7 +444,7 @@ export default function CampaignDetailPage() {
               <SubmissionGrid
                 submissions={campaign.submissions}
                 onVote={handleVote}
-                userAddress={userAddress}
+                userAddress={address}
               />
             </div>
           )}

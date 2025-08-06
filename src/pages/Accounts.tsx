@@ -4,11 +4,11 @@ import AccountFilter from '../components/accounts/AccountFilter';
 import WorkItem from '../components/accounts/WorkItem';
 import ProfileHeader from '../components/accounts/ProfileHeader';
 import { AccountTab } from '../types/accounts';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWallet } from '../hooks/useWallet';
 import { fetchSubmittedWorks, fetchApprovedNfts, fetchCollections } from '../lib/api/accounts';
 
 const AccountsPage = () => {
-  const account = useActiveAccount();
+  const { isConnected, address, connectWallet } = useWallet();
   const [selectedTab, setSelectedTab] = useState<AccountTab>('Submitted Works');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [submittedWorks, setSubmittedWorks] = useState<any[]>([]);
@@ -18,13 +18,13 @@ const AccountsPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (account?.address) {
+      if (isConnected && address) {
         setLoading(true);
         try {
           const [submitted, approved, userCollections] = await Promise.all([
-            fetchSubmittedWorks(account.address),
-            fetchApprovedNfts(account.address),
-            fetchCollections(account.address)
+            fetchSubmittedWorks(address),
+            fetchApprovedNfts(address),
+            fetchCollections(address)
           ]);
           setSubmittedWorks(submitted);
           setApprovedNfts(approved);
@@ -34,10 +34,12 @@ const AccountsPage = () => {
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
     fetchData();
-  }, [account]);
+  }, [isConnected, address]);
 
   const getCurrentItems = () => {
     switch (selectedTab) {
@@ -56,10 +58,10 @@ const AccountsPage = () => {
 
   // User data from connected wallet
   const userData = {
-    username: account?.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "",
+    username: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "",
     displayName: "",
     handle: "",
-    walletAddress: account?.address || "",
+    walletAddress: address || "",
     ensName: "",
     bio: "",
     joinedDate: "",
@@ -126,7 +128,28 @@ const AccountsPage = () => {
       {/* Content Area */}
       <main className="py-12 px-6 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-7xl">
-          {loading ? (
+          {!isConnected ? (
+            /* Wallet Connection Required */
+            <div className="text-center py-24">
+              <div className="w-24 h-24 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-gray-800">
+                <svg className="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-semibold text-white mb-4">
+                Connect Your Wallet
+              </h3>
+              <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+                Connect your wallet to view your submitted artworks, approved NFTs, and collections.
+              </p>
+              <button 
+                onClick={connectWallet}
+                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black px-8 py-4 rounded-lg font-medium transition-all text-lg"
+              >
+                Connect Wallet
+              </button>
+            </div>
+          ) : loading ? (
             <div className="text-center py-24">
               <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-purple-500 mx-auto mb-8"></div>
               <h3 className="text-2xl font-semibold text-white mb-4">Loading your space...</h3>

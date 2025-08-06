@@ -8,6 +8,7 @@ import { SubmissionFormData } from '../types/artwork';
 import { STAKE_INFO } from '../utils/artworkSubmission';
 import { fetchCampaigns, submitArtwork } from '../lib/api/campaigns';
 import { Campaign } from '../types/campaigns';
+import { useWallet } from '../hooks/useWallet';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -137,6 +138,7 @@ const SuccessScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 const SubmitArtworkPage: React.FC = () => {
   const searchParams = useSearchParams();
+  const { isConnected, address, account, connectWallet } = useWallet();
   const [formData, setFormData] = useState<SubmissionFormData>({
     title: '',
     description: '',
@@ -236,11 +238,51 @@ const SubmitArtworkPage: React.FC = () => {
     setIsSubmitting(true);
     setShowConfirmation(false);
     
-    // Simulate API call and blockchain interaction
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    setShowSuccess(true);
+    try {
+      // Check wallet connection using the hook
+      if (!isConnected || !account || !address) {
+        throw new Error('Please connect your wallet to submit artwork');
+      }
+
+      // Import required services
+      const ArtworkSubmissionService = (await import('../lib/blockchain/artworkSubmissionService')).default;
+
+      // Validate form data
+      if (!formData.image || !formData.title || !formData.description || !formData.campaignId) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Validate artwork file
+      const fileValidation = ArtworkSubmissionService.validateArtworkFile(formData.image);
+      if (!fileValidation.valid) {
+        throw new Error(fileValidation.error || 'Invalid artwork file');
+      }
+
+      // Submit artwork to blockchain
+      const result = await ArtworkSubmissionService.submitArtwork(account, {
+        campaignId: parseInt(formData.campaignId),
+        title: formData.title,
+        description: formData.description,
+        imageFile: formData.image,
+        artistAddress: address,
+      });
+
+      if (result.success) {
+        console.log('Artwork submitted successfully:', {
+          transactionHash: result.transactionHash,
+          ipfsHash: result.ipfsHash,
+          ipfsUrl: result.ipfsUrl,
+        });
+        setShowSuccess(true);
+      } else {
+        throw new Error(result.error || 'Failed to submit artwork');
+      }
+    } catch (error) {
+      console.error('Error submitting artwork:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit artwork');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSuccessClose = () => {
@@ -428,6 +470,30 @@ const SubmitArtworkPage: React.FC = () => {
             </div>
           </motion.div>
 
+          {/* Wallet Connection Status */}
+          {!isConnected && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-6"
+            >
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-yellow-400">
+                <AlertCircle size={20} />
+                Wallet Connection Required
+              </h3>
+              <p className="text-gray-300 mb-4">
+                You need to connect your wallet to submit artwork to campaigns.
+              </p>
+              <button
+                onClick={connectWallet}
+                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-medium"
+              >
+                Connect Wallet
+              </button>
+            </motion.div>
+          )}
+
           {/* Submit Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -437,9 +503,9 @@ const SubmitArtworkPage: React.FC = () => {
           >
             <button
               type="submit"
-              disabled={!isFormValid || isSubmitting}
+              disabled={!isFormValid || isSubmitting || !isConnected}
               className={`w-full px-8 py-4 rounded-lg font-semibold text-lg transition-all ${
-                isFormValid && !isSubmitting
+                isFormValid && !isSubmitting && isConnected
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-purple-500/25'
                   : 'bg-gray-800 text-gray-500 cursor-not-allowed'
               }`}
@@ -449,6 +515,8 @@ const SubmitArtworkPage: React.FC = () => {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   Processing...
                 </div>
+              ) : !isConnected ? (
+                'Connect Wallet to Submit'
               ) : (
                 'Submit to Campaign'
               )}

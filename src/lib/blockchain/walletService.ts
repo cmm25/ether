@@ -61,6 +61,13 @@ export class WalletService {
   }
 
   /**
+   * Get current connected account (alias for compatibility)
+   */
+  static async getConnectedAccount() {
+    return this.account;
+  }
+
+  /**
    * Get current wallet instance
    */
   static getWallet() {

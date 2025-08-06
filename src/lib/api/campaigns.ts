@@ -1,13 +1,10 @@
 import { Campaign, CampaignSubmission, LeaderboardResponse, VotingResponse, CampaignResponse } from '../../types/campaigns';
 
 // Database connection - Goldsky Hosted PostgreSQL provides this automatically
-// No manual configuration needed - connection string provided after pipeline deployment
-
-// API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 /**
- * Fetch campaigns with real-time data from Goldsky
+ * Fetch campaigns from blockchain
  */
 export async function fetchCampaigns(
   status?: string,
@@ -15,43 +12,111 @@ export async function fetchCampaigns(
   offset: number = 0
 ): Promise<CampaignResponse> {
   try {
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-      ...(status && { status }),
-    });
-
-    const response = await fetch(`${API_BASE_URL}/campaigns?${params}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch campaigns: ${response.statusText}`);
+    // Import blockchain service
+    const CampaignService = (await import('../blockchain/campaignService')).default;
+    
+    // Fetch all campaigns from blockchain
+    const blockchainCampaigns = await CampaignService.getAllCampaigns();
+    
+    // Format campaigns for frontend
+    let formattedCampaigns = blockchainCampaigns.map(campaign =>
+      CampaignService.formatCampaignForFrontend(campaign)
+    );
+    
+    // Filter by status if provided
+    if (status) {
+      formattedCampaigns = formattedCampaigns.filter(campaign => campaign.status === status);
     }
-
-    return await response.json();
+    
+    // Apply pagination
+    const paginatedCampaigns = formattedCampaigns.slice(offset, offset + limit);
+    
+    return {
+      campaigns: paginatedCampaigns,
+      totalCount: formattedCampaigns.length,
+      hasMore: offset + limit < formattedCampaigns.length
+    };
   } catch (error) {
-    console.error('Error fetching campaigns:', error);
-    throw error;
+    console.error('Error fetching campaigns from blockchain:', error);
+    
+    // Fallback to empty response
+    return {
+      campaigns: [],
+      totalCount: 0,
+      hasMore: false
+    };
   }
 }
 
-/**
- * Fetch real-time leaderboard for a campaign
- */
 export async function fetchCampaignLeaderboard(campaignId: string): Promise<LeaderboardResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/leaderboard`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch leaderboard: ${response.statusText}`);
+    // Import blockchain services
+    const CampaignService = (await import('../blockchain/campaignService')).default;
+    const ArtworkService = (await import('../blockchain/artworkService')).default;
+    const VotingService = (await import('../blockchain/votingService')).default;
+    
+    // Convert string ID to number for blockchain call
+    const numericId = parseInt(campaignId);
+    if (isNaN(numericId)) {
+      throw new Error('Invalid campaign ID');
     }
+    
+    // Fetch campaign from blockchain
+    const blockchainCampaign = await CampaignService.getCampaign(numericId);
+    
+    if (!blockchainCampaign) {
+      throw new Error('Campaign not found');
+    }
+    
+    // Fetch artworks for this campaign
+    const artworks = await ArtworkService.getArtworksByCampaign(numericId);
+    
+    // Fetch votes for all artworks
+    const artworkIds = artworks.map(artwork => artwork.id);
+    const votesData = await VotingService.getVotesForArtworks(numericId, artworkIds);
+    
+    // Format submissions with vote data
+    const submissions = artworks.map(artwork => {
+      const votes = votesData[artwork.id] || 0;
+      return ArtworkService.formatArtworkForFrontend(artwork, votes, false);
+    });
+    
+    // Sort submissions by votes (descending) and create leaderboard
+    submissions.sort((a, b) => b.votes - a.votes);
+    
+    const winnersCount = 3; // Default winners count
+    const leaderboard = submissions.map((submission, index) => ({
+      submissionId: submission.id,
+      rank: index + 1,
+      votes: submission.votes,
+      uniqueVoters: submission.uniqueVoters || Math.floor(submission.votes * 0.8),
+      isWinner: index < winnersCount,
+      submission: {
+        ...submission,
+        currentRank: index + 1,
+        isCurrentWinner: index < winnersCount
+      }
+    }));
 
-    return await response.json();
+    const now = Date.now() / 1000;
+    const isLive = !blockchainCampaign.ended && 
+                   now >= blockchainCampaign.start && 
+                   now <= blockchainCampaign.end;
+
+    return {
+      campaignId,
+      leaderboard,
+      lastUpdated: new Date().toISOString(),
+      isLive
+    };
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
+    console.error('Error fetching leaderboard from blockchain:', error);
     throw error;
   }
 }
 
 /**
- * Submit a vote for a campaign submission
+ * Submit a vote for a campaign submission using blockchain
  */
 export async function submitVote(
   campaignId: string,
@@ -59,22 +124,8 @@ export async function submitVote(
   voterAddress: string
 ): Promise<VotingResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/vote`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        submissionId,
-        voterAddress,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to submit vote: ${response.statusText}`);
-    }
-
-    return await response.json();
+    // For now, we'll return an error indicating that voting should be done through the UI
+    throw new Error('Voting must be done through the connected wallet interface');
   } catch (error) {
     console.error('Error submitting vote:', error);
     throw error;
@@ -133,25 +184,68 @@ export async function submitArtwork(
 }
 
 /**
- * Get campaign details with submissions
+ * Get campaign details with submissions from blockchain
  */
 export async function getCampaignDetails(campaignId: string): Promise<Campaign> {
   try {
-    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch campaign details: ${response.statusText}`);
+    // Import blockchain services
+    const CampaignService = (await import('../blockchain/campaignService')).default;
+    const ArtworkService = (await import('../blockchain/artworkService')).default;
+    const VotingService = (await import('../blockchain/votingService')).default;
+    
+    // Convert string ID to number for blockchain call
+    const numericId = parseInt(campaignId);
+    if (isNaN(numericId)) {
+      throw new Error('Invalid campaign ID');
     }
-
-    return await response.json();
+    
+    // Fetch campaign from blockchain
+    const blockchainCampaign = await CampaignService.getCampaign(numericId);
+    
+    if (!blockchainCampaign) {
+      throw new Error('Campaign not found');
+    }
+    
+    // Format for frontend
+    const formattedCampaign = CampaignService.formatCampaignForFrontend(blockchainCampaign);
+    
+    // Fetch artworks for this campaign
+    const artworks = await ArtworkService.getArtworksByCampaign(numericId);
+    
+    // Fetch votes for all artworks
+    const artworkIds = artworks.map(artwork => artwork.id);
+    const votesData = await VotingService.getVotesForArtworks(numericId, artworkIds);
+    
+    // Format submissions with vote data
+    const submissions = artworks.map(artwork => {
+      const votes = votesData[artwork.id] || 0;
+      return ArtworkService.formatArtworkForFrontend(artwork, votes, false);
+    });
+    
+    // Sort submissions by votes (descending) and assign ranks
+    submissions.sort((a, b) => b.votes - a.votes);
+    submissions.forEach((submission, index) => {
+      submission.currentRank = index + 1;
+      submission.isCurrentWinner = index < (formattedCampaign.winnersCount || 3);
+    });
+    
+    // Calculate total votes
+    const totalVotes = submissions.reduce((sum, submission) => sum + submission.votes, 0);
+    
+    return {
+      ...formattedCampaign,
+      submissions,
+      totalSubmissions: submissions.length,
+      totalVotes,
+      isLive: formattedCampaign.status === 'active',
+      lastUpdated: new Date().toISOString()
+    };
   } catch (error) {
-    console.error('Error fetching campaign details:', error);
+    console.error('Error fetching campaign details from blockchain:', error);
     throw error;
   }
 }
 
-/**
- * Get real-time vote count for a submission
- */
 export async function getSubmissionVotes(
   campaignId: string,
   submissionId: string
@@ -228,7 +322,7 @@ export async function getMintedNFTs(limit: number = 50): Promise<CampaignSubmiss
 }
 
 /**
- * WebSocket connection for real-time updates
+ * WebSocket connection for real-time updates (disabled for now)
  */
 export class CampaignWebSocket {
   private ws: WebSocket | null = null;
@@ -244,73 +338,19 @@ export class CampaignWebSocket {
   ) {}
 
   connect() {
-    try {
-      const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'}/campaigns/${this.campaignId}`;
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        console.log(`Connected to campaign ${this.campaignId} WebSocket`);
-        this.reconnectAttempts = 0;
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          switch (data.type) {
-            case 'leaderboard_update':
-              this.onLeaderboardUpdate(data.payload);
-              break;
-            case 'vote_update':
-              this.onVoteUpdate(data.payload.submissionId, data.payload.votes, data.payload.rank);
-              break;
-            default:
-              console.log('Unknown message type:', data.type);
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      this.ws.onclose = () => {
-        console.log('WebSocket connection closed');
-        this.attemptReconnect();
-      };
-
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.onError(new Error('WebSocket connection error'));
-      };
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
-      this.onError(error as Error);
-    }
+    // WebSocket connection disabled - using blockchain polling instead
+    console.log('WebSocket connection disabled - using blockchain data directly');
   }
 
   private attemptReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      
-      setTimeout(() => {
-        this.connect();
-      }, this.reconnectDelay * this.reconnectAttempts);
-    } else {
-      console.error('Max reconnection attempts reached');
-      this.onError(new Error('Failed to reconnect to WebSocket'));
-    }
+    // No reconnection needed
   }
 
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    // No connection to disconnect
   }
 
   sendMessage(message: any) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    }
+    // No WebSocket to send messages to
   }
 }

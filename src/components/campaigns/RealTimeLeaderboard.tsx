@@ -51,7 +51,7 @@ const RealTimeLeaderboard: React.FC<RealTimeLeaderboardProps> = ({
     setError('Real-time connection lost. Data may not be current.');
   }, []);
 
-  // Initialize data and WebSocket connection
+  // Initialize data (WebSocket disabled)
   useEffect(() => {
     const initializeLeaderboard = async () => {
       try {
@@ -64,16 +64,8 @@ const RealTimeLeaderboard: React.FC<RealTimeLeaderboardProps> = ({
         setIsLive(data.isLive);
         setLastUpdated(data.lastUpdated);
 
-        // Set up WebSocket for real-time updates
-        const websocket = new CampaignWebSocket(
-          campaignId,
-          handleLeaderboardUpdate,
-          handleVoteUpdate,
-          handleWebSocketError
-        );
-        
-        websocket.connect();
-        setWs(websocket);
+        // WebSocket connection disabled - using blockchain data directly
+        console.log('Leaderboard loaded from blockchain');
 
       } catch (err) {
         console.error('Error initializing leaderboard:', err);
@@ -85,13 +77,16 @@ const RealTimeLeaderboard: React.FC<RealTimeLeaderboardProps> = ({
 
     initializeLeaderboard();
 
-    // Cleanup WebSocket on unmount
+    // Set up periodic refresh instead of WebSocket
+    const refreshInterval = setInterval(() => {
+      initializeLeaderboard();
+    }, 30000); // Refresh every 30 seconds
+
+    // Cleanup interval on unmount
     return () => {
-      if (ws) {
-        ws.disconnect();
-      }
+      clearInterval(refreshInterval);
     };
-  }, [campaignId, handleLeaderboardUpdate, handleVoteUpdate, handleWebSocketError]);
+  }, [campaignId]);
 
   // Handle voting
   const handleVote = async (submissionId: string) => {

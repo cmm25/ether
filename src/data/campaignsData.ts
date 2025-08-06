@@ -75,7 +75,12 @@ export const campaigns: Campaign[] = [
     totalVotes: 1247,
     prize: 'Featured in Gallery',
     category: 'Digital Art',
-    submissions: campaignSubmissions.slice(0, 3)
+    submissions: campaignSubmissions.slice(0, 3),
+    votingPeriodHours: 168,
+    winnersCount: 3,
+    requiresApproval: false,
+    isLive: true,
+    lastUpdated: '2024-01-20T12:00:00Z'
   },
   {
     id: 'camp-2',
@@ -88,7 +93,12 @@ export const campaigns: Campaign[] = [
     totalVotes: 0,
     prize: 'Featured in Gallery',
     category: 'Abstract',
-    submissions: []
+    submissions: [],
+    votingPeriodHours: 168,
+    winnersCount: 5,
+    requiresApproval: true,
+    isLive: false,
+    lastUpdated: '2024-01-20T12:00:00Z'
   },
   {
     id: 'camp-3',
@@ -101,7 +111,12 @@ export const campaigns: Campaign[] = [
     totalVotes: 2156,
     prize: 'Featured in Gallery',
     category: 'Mixed Media',
-    submissions: campaignSubmissions.slice(3, 5)
+    submissions: campaignSubmissions.slice(3, 5),
+    votingPeriodHours: 168,
+    winnersCount: 3,
+    requiresApproval: false,
+    isLive: false,
+    lastUpdated: '2023-12-31T23:59:59Z'
   }
 ];
 
