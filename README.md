@@ -172,12 +172,6 @@ npm run build
 npm run start
 ```
 
-## 📚 Documentation
-
-- [Blockchain Integration Guide](./BLOCKCHAIN_INTEGRATION.md)
-- [Frontend Setup Guide](./ether-frontend/README.md)
-- [Smart Contract Documentation](./contracts/README.md)
-
 ## 🤝 Contributing
 
 1. Fork the repository
