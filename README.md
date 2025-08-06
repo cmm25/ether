@@ -1,210 +1,210 @@
-# Ether NFT Campaign & Voting System
+# Ether - Decentralized Art Platform
 
-A comprehensive blockchain-powered platform where users can create campaigns, submit artwork, vote in real-time, and automatically mint winning submissions as NFTs for gallery display.
+A comprehensive blockchain-based platform for digital art campaigns, voting, and NFT minting built on Ethereum.
 
-## 🎯 What is Ether?
+## 🏗️ Repository Structure
 
-Ether is a decentralized platform that enables a complete NFT campaign lifecycle:
-
-1. **🎨 Campaign Creation** - Create themed art campaigns with prizes and voting periods
-2. **📤 Artwork Submission** - Artists submit their work to active campaigns  
-3. **🗳️ Real-time Voting** - Community votes for favorite submissions with live leaderboards
-4. **🏆 Automatic Winner Selection** - Top submissions are automatically selected based on votes
-5. **🎭 NFT Minting** - Winning artworks are minted as NFTs automatically
-6. **🖼️ Gallery Display** - Minted NFTs are showcased in the main gallery
-
-## 🚀 Quick Start for Users
-
-### For Campaign Creators
-1. Connect your wallet to the platform
-2. Navigate to "Create Campaign" 
-3. Set your campaign details (theme, duration, number of winners)
-4. Launch your campaign and watch submissions roll in!
-
-### For Artists
-1. Browse active campaigns
-2. Upload your artwork (images stored on IPFS)
-3. Submit to campaigns (up to 3 submissions per campaign)
-4. Watch the real-time voting and leaderboards
-
-### For Voters
-1. Explore active campaigns and submissions
-2. Vote for your favorite artworks (up to 5 votes per campaign)
-3. See live leaderboard updates as votes come in
-4. Watch winners get automatically minted as NFTs
-
-## ✨ Key Features
-
-### 🔴 Real-time Everything
-- **Live Leaderboards**: See rankings update in real-time as votes come in
-- **Instant Voting**: Vote and see results immediately (< 1 second updates)
-- **Live Campaign Status**: Track campaign progress and time remaining
-
-### 🛡️ Fair & Secure
-- **Blockchain Verified**: All votes and submissions recorded on-chain
-- **One Vote Per Person**: Wallet-based voting prevents manipulation  
-- **Transparent Process**: All actions are publicly verifiable
-- **Automated Winners**: No human intervention in winner selection
-
-### 🎨 Artist-Friendly
-- **IPFS Storage**: Your artwork is permanently stored and accessible
-- **Automatic NFT Minting**: Winners become NFT owners automatically
-- **Gallery Showcase**: Winning NFTs displayed in the main gallery
-- **Ownership Rights**: Artists retain full ownership of their minted NFTs
-
-## 🏗️ Technical Architecture
-
-### Frontend (Next.js 15)
-- Real-time components with WebSocket connections
-- Campaign management and artwork submission interfaces
-- Live voting with instant feedback
-- NFT gallery for showcasing winners
-
-### Smart Contracts (Ethereum)
-- **CampaignManager.sol**: Handles campaign creation and lifecycle
-- **ArtworkSubmission.sol**: Manages artwork submissions to campaigns
-- **Voting.sol**: Processes votes with anti-manipulation features
-- **GalleryNFT.sol**: ERC721 contract for minting winner NFTs
-
-### Real-time Data (Goldsky)
-- Sub-second blockchain data streaming
-- Live vote aggregation and ranking
-- Automatic winner detection and NFT minting triggers
-- Campaign lifecycle automation
-
-## 📊 Platform Statistics
-
-### Performance Metrics
-- **Vote to UI Update**: < 1 second
-- **Concurrent Users**: Supports thousands of simultaneous voters
-- **Campaign Capacity**: Unlimited active campaigns
-- **Blockchain Integration**: Real-time data streaming from Ethereum
-
-### User Limits (Anti-Spam)
-- **Submissions**: Maximum 3 artworks per campaign per user
-- **Voting**: Maximum 5 votes per campaign per user
-- **One Vote Rule**: One vote per artwork per user (can be changed)
-
-## 🎯 User Flows
-
-### 🎨 Campaign Creator Journey
 ```
-1. Connect Wallet → 2. Create Campaign → 3. Set Parameters → 
-4. Launch Campaign → 5. Monitor Submissions → 6. Watch Voting → 
-7. See Winners Minted → 8. View in Gallery
+Ether/
+├── contracts/              # Smart contracts (Hardhat project)
+│   ├── contracts/          # Solidity smart contracts
+│   ├── test/              # Contract tests
+│   ├── ignition/          # Deployment scripts
+│   └── hardhat.config.ts  # Hardhat configuration
+├── ether-frontend/        # Next.js frontend application
+│   ├── src/               # Frontend source code
+│   ├── public/            # Static assets
+│   └── package.json       # Frontend dependencies
+├── BLOCKCHAIN_INTEGRATION.md  # Detailed blockchain setup guide
+└── README.md              # This file
 ```
 
-### 🖌️ Artist Journey  
-```
-1. Browse Campaigns → 2. Select Campaign → 3. Upload Artwork → 
-4. Add Details → 5. Submit → 6. Share with Community → 
-7. Monitor Votes → 8. Celebrate if Winner!
-```
-
-### 🗳️ Voter Journey
-```
-1. Explore Campaigns → 2. View Submissions → 3. Vote for Favorites → 
-4. Watch Live Leaderboard → 5. See Final Results → 
-6. View Winners in Gallery
-```
-
-## 🔐 Security & Trust
-
-### Vote Integrity
-- All votes recorded permanently on blockchain
-- Wallet verification prevents fake accounts
-- Real-time vote counting with transparency
-- Immutable results that can't be changed
-
-### Fair Competition
-- Submission limits prevent spam
-- Time-based tie-breaking for fair ranking
-- Automated winner selection removes bias
-- Public verification of all results
-
-## 🌟 Why Choose Ether?
-
-### For Artists
-- **Global Reach**: Showcase your work to a worldwide audience
-- **Fair Competition**: Transparent, community-driven voting
-- **NFT Ownership**: Winning artworks become valuable NFTs
-- **No Fees**: Gasless submissions and voting via Sequence
-
-### For Collectors & Voters
-- **Discover Talent**: Find amazing artists before they're famous
-- **Community Impact**: Your votes directly influence outcomes
-- **Real-time Engagement**: Watch campaigns unfold live
-- **Gallery Access**: View and potentially acquire winning NFTs
-
-### For Campaign Creators
-- **Easy Setup**: Launch campaigns in minutes
-- **Automated Management**: Platform handles everything after setup
-- **Community Building**: Engage artists and collectors around themes
-- **Transparent Results**: Verifiable, fair winner selection
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Ethereum wallet (MetaMask, WalletConnect, etc.)
-- Some ETH for transaction fees (minimal amounts)
-- Web browser (Chrome, Firefox, Safari, Edge)
+- Node.js 18+ and npm
+- MetaMask or compatible Web3 wallet
+- Git
 
-### Access the Platform
-1. Visit the Ether platform website
-2. Connect your wallet
-3. Start exploring campaigns or create your own!
+### 1. Clone the Repository
+```bash
+git clone <your-repo-url>
+cd Ether
+```
 
-## 📞 Support & Community
+### 2. Setup Smart Contracts
+```bash
+cd contracts
+npm install
+npx hardhat compile
+```
 
-### Get Help
-- **Documentation**: Comprehensive guides and tutorials
-- **Community Discord**: Real-time support and discussions  
-- **GitHub Issues**: Report bugs and request features
-- **Video Tutorials**: Step-by-step platform walkthroughs
+### 3. Setup Frontend
+```bash
+cd ../ether-frontend
+npm install
+cp .env.local.example .env.local
+# Configure your environment variables
+npm run dev
+```
 
-### Stay Updated
-- Follow our social media for platform updates
-- Join the Discord for community events
-- Subscribe to our newsletter for new features
+## 📋 Features
 
-## 🔮 Roadmap
+### 🎨 **Art Campaign System**
+- Create and manage art campaigns
+- Submit digital artworks to campaigns
+- Community-driven voting system
+- Automatic winner selection
 
-### Coming Soon
-- **Mobile App**: Native iOS and Android experience
-- **Multi-chain Support**: Expand beyond Ethereum
-- **Social Features**: Comments, profiles, and following
-- **Advanced Voting**: Weighted and quadratic voting options
+### 🗳️ **Decentralized Voting**
+- Blockchain-based voting mechanism
+- Real-time leaderboards
+- Transparent vote counting
+- Anti-fraud protection
 
-### Future Vision
-- **DAO Governance**: Community-driven platform decisions
-- **Marketplace Integration**: Direct NFT trading
-- **AI Features**: Content moderation and recommendations
-- **Cross-chain NFTs**: Multi-blockchain support
+### 🎯 **NFT Minting**
+- Automatic NFT minting for winners
+- IPFS metadata storage
+- Gallery display system
+- Ownership verification
 
----
+### 🔔 **Smart Notifications**
+- Real-time blockchain notifications
+- Campaign status updates
+- Voting reminders
+- NFT minting alerts
 
-## 🏆 Success Stories
+### 👤 **User Profiles**
+- Wallet-based authentication
+- Submission history tracking
+- NFT collection display
+- Achievement system
 
-*"Ether gave me my first NFT sale! The real-time voting was so exciting to watch."* - Digital Artist
+## 🔧 Technology Stack
 
-*"I love how transparent everything is. You can verify every vote on the blockchain."* - Community Voter
+### **Blockchain**
+- **Solidity** - Smart contract development
+- **Hardhat** - Development framework
+- **Thirdweb** - Web3 integration
+- **Ethereum Sepolia** - Testnet deployment
 
-*"Creating campaigns is so easy, and the automated winner selection saves me hours."* - Campaign Creator
+### **Frontend**
+- **Next.js 14** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
 
----
+### **Storage & APIs**
+- **IPFS (Pinata)** - Decentralized file storage
+- **Supabase** - User data and profiles
+- **Web3 APIs** - Blockchain interaction
 
-**Built with ❤️ for the NFT community**
+## 📱 Smart Contracts
 
-*Empowering artists and collectors through decentralized, community-driven campaigns*
+### **Deployed Contracts (Sepolia Testnet)**
+- **CampaignManager**: `0xF55843733EBF4d8355DF198F99B1b01620C9eD9B`
+- **ArtworkSubmission**: `0x929b94e6Df14F6E91a290c0778feA81b4F26d358`
+- **Voting**: `0x2B56e4bb5B885C5B570653491bcb7E69a888C913`
+- **GalleryNFT**: `0x4d3B0C614DE9830BE97d6B23c74d8356A5CcDd89`
+
+### **Contract Features**
+- **Campaign Management** - Create, manage, and end campaigns
+- **Artwork Submission** - Submit and validate artworks
+- **Voting System** - Secure, transparent voting mechanism
+- **NFT Minting** - Automatic minting for campaign winners
+
+## 🎯 User Journey
+
+1. **Connect Wallet** - MetaMask integration
+2. **Browse Campaigns** - View active art campaigns
+3. **Submit Artwork** - Upload art to IPFS and submit to campaigns
+4. **Vote on Art** - Vote for favorite submissions
+5. **Track Progress** - Real-time leaderboards and notifications
+6. **Mint NFTs** - Winners automatically get NFTs minted
+7. **Gallery Display** - View and showcase NFT collection
+
+## 🔐 Environment Setup
+
+### **Frontend Environment Variables**
+```env
+# Blockchain
+NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_thirdweb_client_id
+NEXT_PUBLIC_CAMPAIGN_MANAGER_ADDRESS=0xF55843733EBF4d8355DF198F99B1b01620C9eD9B
+NEXT_PUBLIC_ARTWORK_SUBMISSION_ADDRESS=0x929b94e6Df14F6E91a290c0778feA81b4F26d358
+NEXT_PUBLIC_VOTING_ADDRESS=0x2B56e4bb5B885C5B570653491bcb7E69a888C913
+NEXT_PUBLIC_GALLERY_NFT_ADDRESS=0x4d3B0C614DE9830BE97d6B23c74d8356A5CcDd89
+
+# IPFS
+NEXT_PUBLIC_PINATA_JWT=your_pinata_jwt_token
+NEXT_PUBLIC_PINATA_GATEWAY_URL=https://gateway.pinata.cloud
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## 🧪 Testing
+
+### **Smart Contracts**
+```bash
+cd contracts
+npx hardhat test
+```
+
+### **Frontend**
+```bash
+cd ether-frontend
+npm run test
+```
+
+## 🚀 Deployment
+
+### **Smart Contracts**
+```bash
+cd contracts
+npx hardhat run scripts/deploy.ts --network sepolia
+```
+
+### **Frontend**
+```bash
+cd ether-frontend
+npm run build
+npm run start
+```
+
+## 📚 Documentation
+
+- [Blockchain Integration Guide](./BLOCKCHAIN_INTEGRATION.md)
+- [Frontend Setup Guide](./ether-frontend/README.md)
+- [Smart Contract Documentation](./contracts/README.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing
+## 🔗 Links
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+- **Live Demo**: [Coming Soon]
+- **Documentation**: [GitHub Wiki]
+- **Discord**: [Community Server]
+- **Twitter**: [@EtherPlatform]
+
+## 🙏 Acknowledgments
+
+- Ethereum Foundation for blockchain infrastructure
+- Thirdweb for Web3 development tools
+- Pinata for IPFS storage solutions
+- Supabase for backend services
+- Next.js team for the amazing framework
 
 ---
 
-**Ready to start your NFT journey? Connect your wallet and dive in!** 🚀
+**Built with ❤️ for the decentralized art community**
