@@ -1,4 +1,4 @@
-# Ether - Decentralized Art Platform.
+# Ether - Decentralized Art Platform
 
 A comprehensive blockchain-based platform for digital art campaigns, voting, and NFT minting built on Ethereum.
 
@@ -127,6 +127,28 @@ npm run dev
 - **Voting System** - Secure, transparent voting mechanism
 - **NFT Minting** - Automatic minting for campaign winners
 
+## 📝 Smart Contracts Overview
+
+- **CampaignManager**: Handles creation, management, and closure of art campaigns.
+- **ArtworkSubmission**: Manages submission and validation of artworks to campaigns.
+- **Voting**: Implements secure, transparent voting for campaign entries.
+- **GalleryNFT**: Mints NFTs for campaign winners and manages the NFT gallery.
+
+For more on how real-time blockchain data is indexed and used, see the [Goldsky Mirror documentation](https://docs.goldsky.com/subgraphs/mirror/sources/subgraphs).
+
+## 📡 Goldsky Integration
+
+Ether leverages [Goldsky](https://goldsky.com/) for real-time blockchain data indexing, automation, and analytics. Goldsky pipelines process on-chain events and store them in a Postgres database, enabling features like live leaderboards, campaign automation, and NFT gallery updates.
+
+### Goldsky Pipelines Used
+
+- **ether-core-pipeline**: Indexes NFT mints, votes, campaign lifecycle events, and artwork submissions from the Sepolia testnet. Data is transformed and stored in the `ether_live` schema for use in leaderboards, notifications, and analytics.
+- **ether-automation-pipeline**: Detects campaign end events and final winner selections, triggering automation for campaign closure and NFT minting. Results are stored in `campaign_automation_triggers` and `campaign_final_winners` tables.
+- **ether-leaderboard-pipeline**: Streams live voting events from the Voting contract, supporting real-time leaderboard updates and transparent vote tracking.
+- **ether-nft-pipeline**: Indexes NFT transfer events for the GalleryNFT contract, powering the NFT gallery and ownership verification features. Data is stored in the `ether_gallery.nft_transfers` table.
+
+Goldsky enables Ether to provide instant feedback, live updates, and robust analytics by bridging on-chain activity with the app's backend in a scalable, reliable way.
+
 ## 🎯 User Journey
 
 1. **Connect Wallet** - MetaMask integration
@@ -149,13 +171,17 @@ NEXT_PUBLIC_ARTWORK_SUBMISSION_ADDRESS=0x929b94e6Df14F6E91a290c0778feA81b4F26d35
 NEXT_PUBLIC_VOTING_ADDRESS=0x2B56e4bb5B885C5B570653491bcb7E69a888C913
 NEXT_PUBLIC_GALLERY_NFT_ADDRESS=0x4d3B0C614DE9830BE97d6B23c74d8356A5CcDd89
 
-# IPFS
+# IPFS (Pinata)
 NEXT_PUBLIC_PINATA_JWT=your_pinata_jwt_token
 NEXT_PUBLIC_PINATA_GATEWAY_URL=https://gateway.pinata.cloud
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Goldsky (Required for real-time blockchain data)
+GOLDSKY_API_KEY=your_goldsky_api_key
+GOLDSKY_PROJECT_ID=your_goldsky_project_id
 ```
 
 ## 🧪 Testing
@@ -210,25 +236,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Built with ❤️ for the decentralized art community**
-
-## 📡 Goldsky Integration
-
-Ether leverages [Goldsky](https://goldsky.com/) for real-time blockchain data indexing, automation, and analytics. Goldsky pipelines process on-chain events and store them in a Postgres database, enabling features like live leaderboards, campaign automation, and NFT gallery updates.
-
-### Goldsky Pipelines Used
-
-- **ether-core-pipeline**: Indexes NFT mints, votes, campaign lifecycle events, and artwork submissions from the Sepolia testnet. Data is transformed and stored in the `ether_live` schema for use in leaderboards, notifications, and analytics.
-- **ether-automation-pipeline**: Detects campaign end events and final winner selections, triggering automation for campaign closure and NFT minting. Results are stored in `campaign_automation_triggers` and `campaign_final_winners` tables.
-- **ether-leaderboard-pipeline**: Streams live voting events from the Voting contract, supporting real-time leaderboard updates and transparent vote tracking.
-- **ether-nft-pipeline**: Indexes NFT transfer events for the GalleryNFT contract, powering the NFT gallery and ownership verification features. Data is stored in the `ether_gallery.nft_transfers` table.
-
-Goldsky enables Ether to provide instant feedback, live updates, and robust analytics by bridging on-chain activity with the app's backend in a scalable, reliable way.
-
-## 📝 Smart Contracts Overview
-
-- **CampaignManager**: Handles creation, management, and closure of art campaigns.
-- **ArtworkSubmission**: Manages submission and validation of artworks to campaigns.
-- **Voting**: Implements secure, transparent voting for campaign entries.
-- **GalleryNFT**: Mints NFTs for campaign winners and manages the NFT gallery.
-
-For more on how real-time blockchain data is indexed and used, see the [Goldsky Mirror documentation](https://docs.goldsky.com/subgraphs/mirror/sources/subgraphs).
