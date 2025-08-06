@@ -223,3 +223,12 @@ Ether leverages [Goldsky](https://goldsky.com/) for real-time blockchain data in
 - **ether-nft-pipeline**: Indexes NFT transfer events for the GalleryNFT contract, powering the NFT gallery and ownership verification features. Data is stored in the `ether_gallery.nft_transfers` table.
 
 Goldsky enables Ether to provide instant feedback, live updates, and robust analytics by bridging on-chain activity with the app's backend in a scalable, reliable way.
+
+## 📝 Smart Contracts Overview
+
+- **CampaignManager**: Handles creation, management, and closure of art campaigns.
+- **ArtworkSubmission**: Manages submission and validation of artworks to campaigns.
+- **Voting**: Implements secure, transparent voting for campaign entries.
+- **GalleryNFT**: Mints NFTs for campaign winners and manages the NFT gallery.
+
+For more on how real-time blockchain data is indexed and used, see the [Goldsky Mirror documentation](https://docs.goldsky.com/subgraphs/mirror/sources/subgraphs).
