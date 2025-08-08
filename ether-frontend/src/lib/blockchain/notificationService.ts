@@ -1,6 +1,7 @@
 import { createThirdwebClient, getContract, readContract } from "thirdweb";
 import { defineChain } from "thirdweb/chains";
 import UserDataService from "./userDataService";
+import { Notification } from "@/types/notifications";
 
 // Initialize Thirdweb client
 const client = createThirdwebClient({
@@ -15,22 +16,7 @@ const CAMPAIGN_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_CAMPAIGN_MANAGER_ADDRES
 const ARTWORK_SUBMISSION_ADDRESS = process.env.NEXT_PUBLIC_ARTWORK_SUBMISSION_ADDRESS!;
 const VOTING_ADDRESS = process.env.NEXT_PUBLIC_VOTING_ADDRESS!;
 
-export interface Notification {
-  id: string;
-  type: 'artwork' | 'voting' | 'campaign' | 'nft';
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  details?: {
-    artworkId?: string;
-    campaignId?: number;
-    status?: 'approved' | 'rejected' | 'pending';
-    sessionId?: string;
-    sessionStatus?: 'open' | 'closed';
-    transactionHash?: string;
-  };
-}
+// Use unified Notification type from types/notifications
 
 // Contract ABIs for events
 const CAMPAIGN_MANAGER_ABI = [
@@ -75,7 +61,7 @@ export class NotificationService {
 
       // Get user's submitted works and generate artwork notifications
       const submittedWorks = await UserDataService.getSubmittedWorks(userAddress);
-      
+
       for (const work of submittedWorks) {
         // Create notification for each submitted artwork
         notifications.push({
@@ -111,7 +97,7 @@ export class NotificationService {
 
       // Get user's NFTs and generate NFT notifications
       const approvedNFTs = await UserDataService.getApprovedNFTs(userAddress);
-      
+
       for (const nft of approvedNFTs) {
         notifications.push({
           id: `nft-${nft.id}`,
@@ -130,7 +116,7 @@ export class NotificationService {
       await this.addCampaignNotifications(notifications, userAddress);
 
       // Sort by timestamp (newest first)
-      return notifications.sort((a, b) => 
+      return notifications.sort((a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
@@ -161,7 +147,7 @@ export class NotificationService {
 
       const now = Math.floor(Date.now() / 1000);
       let activeCampaignCount = 0;
-      
+
       // Check all campaigns for active ones and recent activity
       for (let i = 0; i < Number(totalCampaigns); i++) {
         try {

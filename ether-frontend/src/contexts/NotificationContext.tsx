@@ -1,9 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useWallet } from '../hooks/useWallet';
-import { getNotifications } from '../data/notificationsData';
-import { Notification } from '../lib/blockchain/notificationService';
+import { Notification } from '../types/notifications';
 
 interface NotificationContextType {
   unreadCount: number;
@@ -32,24 +31,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const refreshNotifications = async () => {
+  const refreshNotifications = useCallback(async () => {
     if (!isConnected || !address || loading) return;
 
     try {
       setLoading(true);
-      const userNotifications = await getNotifications(address);
-      setNotifications(userNotifications);
+      const res = await fetch(`/api/notifications?user=${address}`);
+      const json = await res.json();
+      setNotifications((json.notifications || []) as Notification[]);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isConnected, address, loading]);
 
   // Load notifications when wallet connects
   useEffect(() => {
     refreshNotifications();
-  }, [isConnected, address]);
+  }, [isConnected, address, refreshNotifications]);
 
   // Refresh notifications every 30 seconds
   useEffect(() => {
@@ -57,16 +57,32 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     const interval = setInterval(refreshNotifications, 30000); // 30 seconds
     return () => clearInterval(interval);
-  }, [isConnected, address]);
+  }, [isConnected, address, refreshNotifications]);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-    );
+  const markAsRead = async (notificationId: string) => {
+    try {
+      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: address, id: notificationId })
+      });
+    } catch (e) {
+      console.error('Failed to persist markAsRead', e);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: address, all: true })
+      });
+    } catch (e) {
+      console.error('Failed to persist markAllAsRead', e);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

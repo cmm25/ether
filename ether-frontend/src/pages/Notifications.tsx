@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getNotifications } from '../data/notificationsData';
-import { Notification } from '../lib/blockchain/notificationService';
-import { useWallet } from '../hooks/useWallet';
+import { Notification } from '../types/notifications';
 import { useNotifications } from '../contexts/NotificationContext';
 import Link from 'next/link';
 
@@ -11,7 +9,7 @@ const formatDate = (timestamp: string): string => {
   const date = new Date(timestamp);
   const now = new Date();
   const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-  
+
   if (diffInHours < 1) return 'Just now';
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInHours < 48) return 'Yesterday';
@@ -48,8 +46,8 @@ const NotificationIcon = ({ type }: { type: 'artwork' | 'voting' | 'campaign' | 
 const NotificationActions = ({ notification }: { notification: Notification }) => (
   <div className="flex gap-3">
     {notification.details?.artworkId && (
-      <Link 
-        href="/accounts?tab=submitted" 
+      <Link
+        href="/accounts?tab=submitted"
         className="inline-flex items-center gap-1 text-purple-400 text-sm hover:text-purple-300 transition-colors"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -59,7 +57,7 @@ const NotificationActions = ({ notification }: { notification: Notification }) =
       </Link>
     )}
     {notification.details?.campaignId !== undefined && (
-      <Link 
+      <Link
         href={`/campaigns/${notification.details.campaignId}`}
         className="inline-flex items-center gap-1 text-green-400 text-sm hover:text-green-300 transition-colors"
       >
@@ -70,8 +68,8 @@ const NotificationActions = ({ notification }: { notification: Notification }) =
       </Link>
     )}
     {notification.type === 'voting' && !notification.details?.campaignId && (
-      <Link 
-        href="/campaigns" 
+      <Link
+        href="/campaigns"
         className="inline-flex items-center gap-1 text-green-400 text-sm hover:text-green-300 transition-colors"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -81,8 +79,8 @@ const NotificationActions = ({ notification }: { notification: Notification }) =
       </Link>
     )}
     {notification.type === 'nft' && (
-      <Link 
-        href="/" 
+      <Link
+        href="/"
         className="inline-flex items-center gap-1 text-yellow-400 text-sm hover:text-yellow-300 transition-colors"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -105,14 +103,14 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: Notifica
     <div className={`p-6 border-b border-gray-800 hover:bg-gray-900/50 transition-colors ${!notification.read ? 'bg-gray-900/30 border-l-4 border-l-purple-500' : ''}`}>
       <div className="flex items-start gap-4">
         <NotificationIcon type={notification.type} />
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start mb-2">
             <div className="flex-1">
               <h3 className="font-semibold text-lg text-white mb-1">{notification.title}</h3>
               <p className="text-gray-300">{notification.message}</p>
             </div>
-            
+
             {!notification.read && (
               <div className="flex items-center gap-3 ml-4">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
@@ -125,7 +123,7 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: Notifica
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">{formattedDate}</p>
             <NotificationActions notification={notification} />
@@ -144,7 +142,7 @@ const EmptyState = () => (
       </svg>
     </div>
     <h3 className="text-lg font-medium text-white mb-2">No notifications yet</h3>
-    <p className="text-gray-400">When you have notifications, they'll appear here.</p>
+    <p className="text-gray-400">When you have notifications, they&apos;ll appear here.</p>
   </div>
 );
 
@@ -163,7 +161,7 @@ export default function NotificationsPage() {
               </p>
             )}
           </div>
-          
+
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
@@ -173,7 +171,7 @@ export default function NotificationsPage() {
             </button>
           )}
         </div>
-        
+
         <div className="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden">
           {notifications.length === 0 ? (
             <EmptyState />
