@@ -1,8 +1,10 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ProfileModal from '../Profile/ProfileModal';
 import EditProfileForm from '../Profile/EditProfileForm';
 import { ProfileFormData } from '@/types/profile';
+import { getUserProfile } from '@/lib/supabase/user';
+import type { UserProfile } from '@/types/profile';
 
 interface UserData {
   username: string;
@@ -18,6 +20,7 @@ interface UserData {
   followers: number;
   following: number;
   verified: boolean;
+  avatar?: string;
   socialLinks: {
     twitter?: string;
     instagram?: string;
@@ -34,6 +37,22 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // Load saved profile to show avatar/username/etc.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!userData.walletAddress) return;
+        const p = await getUserProfile(userData.walletAddress);
+        if (mounted) setProfile(p);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, [userData.walletAddress]);
 
   const copyWalletAddress = async () => {
     try {
@@ -52,20 +71,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
   // Convert userData to profile format for the form
   const getProfileData = () => ({
     id: '1',
-    username: userData.username,
+    username: profile?.username || userData.username,
     email: 'user@example.com', // This would come from actual user data
-    firstName: userData.displayName.split(' ')[0] || '',
-    lastName: userData.displayName.split(' ').slice(1).join(' ') || '',
-    bio: userData.bio,
-    avatar: '', // Would be actual avatar URL
+    firstName: (profile?.firstName || userData.displayName.split(' ')[0] || ''),
+    lastName: (profile?.lastName || userData.displayName.split(' ').slice(1).join(' ') || ''),
+    bio: (profile?.bio || userData.bio),
+    avatar: profile?.avatar || userData.avatar || '',
     walletAddress: userData.walletAddress,
-    website: userData.socialLinks.website || '',
-    twitter: userData.socialLinks.twitter?.replace('https://twitter.com/', '') || '',
-    instagram: userData.socialLinks.instagram?.replace('https://instagram.com/', '') || '',
+    website: (profile?.website || userData.socialLinks.website || ''),
+    twitter: (profile?.twitter || userData.socialLinks.twitter?.replace('https://twitter.com/', '') || ''),
+    instagram: (profile?.instagram || userData.socialLinks.instagram?.replace('https://instagram.com/', '') || ''),
     discord: '',
-    location: '',
-    joinedAt: userData.joinedDate,
-    isVerified: userData.verified,
+    location: (profile?.location || ''),
+    joinedAt: (profile?.joinedAt || userData.joinedDate),
+    isVerified: (profile?.isVerified ?? userData.verified),
     preferences: {
       emailNotifications: true,
       marketingEmails: false,
@@ -104,11 +123,19 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
           <div className="flex flex-col md:flex-row items-start md:items-end gap-8">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-gray-900/50 backdrop-blur-sm">
-                <span className="text-white text-6xl md:text-7xl lg:text-8xl font-bold">
-                  {userData.username.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              {(profile?.avatar || userData.avatar) ? (
+                <img
+                  src={(profile?.avatar || userData.avatar) as string}
+                  alt={(profile?.username || userData.username) + ' avatar'}
+                  className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 rounded-3xl object-cover shadow-2xl border-4 border-gray-900/50"
+                />
+              ) : (
+                <div className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-gray-900/50 backdrop-blur-sm">
+                  <span className="text-white text-6xl md:text-7xl lg:text-8xl font-bold">
+                    {(profile?.username || userData.username).charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
               {/* Online indicator */}
               <div className="absolute bottom-4 right-4 w-10 h-10 bg-green-500 rounded-full border-4 border-gray-900" />
             </div>
@@ -119,7 +146,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 mb-3">
                   <h1 className="text-3xl md:text-4xl font-bold text-white">
-                    {userData.username}
+                    {profile?.username || userData.username}
                   </h1>
                   {userData.verified && (
                     <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
@@ -129,13 +156,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
                     </div>
                   )}
                 </div>
-                <p className="text-lg text-gray-300">{userData.displayName}</p>
-                <p className="text-indigo-400 font-medium">{userData.handle}</p>
+                <p className="text-lg text-gray-300">{(profile ? `${profile.firstName} ${profile.lastName}`.trim() : userData.displayName)}</p>
+                <p className="text-indigo-400 font-medium">{profile ? `@${profile.username}` : userData.handle}</p>
               </div>
 
               {/* Bio */}
               <p className="text-gray-300 max-w-2xl leading-relaxed text-lg">
-                {userData.bio}
+                {profile?.bio || userData.bio}
               </p>
 
               {/* Stats */}
@@ -152,7 +179,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-gray-400">Joined {userData.joinedDate}</span>
+                  <span className="text-gray-400">Joined {(profile?.joinedAt ? new Date(profile.joinedAt).toLocaleDateString() : userData.joinedDate)}</span>
                 </div>
               </div>
 
@@ -185,35 +212,35 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
 
                 {/* Social Links */}
                 <div className="flex items-center gap-2">
-                  {userData.socialLinks.twitter && (
+                  {(profile?.twitter || userData.socialLinks.twitter) && (
                     <a
-                      href={userData.socialLinks.twitter}
+                      href={profile?.twitter || userData.socialLinks.twitter as string}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 bg-gray-900/50 hover:bg-blue-600/20 rounded-lg border border-gray-800/50 hover:border-blue-500/50 transition-all"
                       title="Twitter"
                     >
                       <svg className="w-4 h-4 text-gray-400 hover:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
                       </svg>
                     </a>
                   )}
-                  {userData.socialLinks.instagram && (
+                  {(profile?.instagram || userData.socialLinks.instagram) && (
                     <a
-                      href={userData.socialLinks.instagram}
+                      href={profile?.instagram || userData.socialLinks.instagram as string}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 bg-gray-900/50 hover:bg-pink-600/20 rounded-lg border border-gray-800/50 hover:border-pink-500/50 transition-all"
                       title="Instagram"
                     >
                       <svg className="w-4 h-4 text-gray-400 hover:text-pink-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987s11.987-5.367 11.987-11.987C24.014 5.367 18.647.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.596-3.205-1.529l1.529-1.297c.447.596 1.148.894 1.676.894.745 0 1.297-.447 1.297-1.148 0-.596-.447-1.148-1.297-1.148H7.301V11.54h1.148c.745 0 1.297-.447 1.297-1.148 0-.596-.447-1.148-1.297-1.148-.596 0-1.148.298-1.529.745L5.691 8.692c.745-.894 1.896-1.529 3.205-1.529 2.297 0 4.146 1.849 4.146 4.146 0 1.148-.447 2.148-1.297 2.745.894.596 1.297 1.596 1.297 2.745 0 2.297-1.849 4.146-4.146 4.146l-.447.043zm7.703-2.297h-1.529v-1.529h1.529v1.529zm0-3.205h-1.529V9.957h1.529v1.529z"/>
+                        <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987s11.987-5.367 11.987-11.987C24.014 5.367 18.647.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.596-3.205-1.529l1.529-1.297c.447.596 1.148.894 1.676.894.745 0 1.297-.447 1.297-1.148 0-.596-.447-1.148-1.297-1.148H7.301V11.54h1.148c.745 0 1.297-.447 1.297-1.148 0-.596-.447-1.148-1.297-1.148-.596 0-1.148.298-1.529.745L5.691 8.692c.745-.894 1.896-1.529 3.205-1.529 2.297 0 4.146 1.849 4.146 4.146 0 1.148-.447 2.148-1.297 2.745.894.596 1.297 1.596 1.297 2.745 0 2.297-1.849 4.146-4.146 4.146l-.447.043zm7.703-2.297h-1.529v-1.529h1.529v1.529zm0-3.205h-1.529V9.957h1.529v1.529z" />
                       </svg>
                     </a>
                   )}
-                  {userData.socialLinks.website && (
+                  {(profile?.website || userData.socialLinks.website) && (
                     <a
-                      href={userData.socialLinks.website}
+                      href={profile?.website || userData.socialLinks.website as string}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 bg-gray-900/50 hover:bg-gray-600/20 rounded-lg border border-gray-800/50 hover:border-gray-500/50 transition-all"
@@ -230,7 +257,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userData }) => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pb-6">
-              <button 
+              <button
                 onClick={handleEditProfile}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2"
               >
