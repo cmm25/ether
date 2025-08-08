@@ -104,6 +104,7 @@ npm run dev
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **Framer Motion** - Animations
+- **Lenis** - Smooth scrolling UX
 
 ### **Storage & APIs**
 
@@ -161,27 +162,68 @@ Goldsky enables Ether to provide instant feedback, live updates, and robust anal
 
 ## 🔐 Environment Setup
 
-### **Frontend Environment Variables**
+### **Environment Variables**
 
 ```env
-# Blockchain
+# Frontend (.env.local in ether-frontend/)
 NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_thirdweb_client_id
-NEXT_PUBLIC_CAMPAIGN_MANAGER_ADDRESS=0xF55843733EBF4d8355DF198F99B1b01620C9eD9B
-NEXT_PUBLIC_ARTWORK_SUBMISSION_ADDRESS=0x929b94e6Df14F6E91a290c0778feA81b4F26d358
-NEXT_PUBLIC_VOTING_ADDRESS=0x2B56e4bb5B885C5B570653491bcb7E69a888C913
-NEXT_PUBLIC_GALLERY_NFT_ADDRESS=0x4d3B0C614DE9830BE97d6B23c74d8356A5CcDd89
-
-# IPFS (Pinata)
+NEXT_PUBLIC_CAMPAIGN_MANAGER_ADDRESS=0x...
+NEXT_PUBLIC_ARTWORK_SUBMISSION_ADDRESS=0x...
+NEXT_PUBLIC_VOTING_ADDRESS=0x...
+NEXT_PUBLIC_GALLERY_NFT_ADDRESS=0x...
 NEXT_PUBLIC_PINATA_JWT=your_pinata_jwt_token
 NEXT_PUBLIC_PINATA_GATEWAY_URL=https://gateway.pinata.cloud
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=public-anon-key
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Server-only (never expose to browser)
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=service-role-key
 
-# Goldsky (Required for real-time blockchain data)
+# Goldsky (CLI auth or env in CI)
 GOLDSKY_API_KEY=your_goldsky_api_key
 GOLDSKY_PROJECT_ID=your_goldsky_project_id
+```
+
+#### Why these envs are required
+
+- **NEXT_PUBLIC_THIRDWEB_CLIENT_ID**: Authenticates dApp reads/writes via Thirdweb SDK.
+- **Contract addresses**: Point the frontend to the shared on-chain state so all users see the same campaigns, submissions, and votes.
+- **Pinata JWT/Gateway**: Upload and serve artwork metadata/images via IPFS.
+- **Supabase URL/Anon Key**: Read user profiles and public data from the browser.
+- **SUPABASE_SERVICE_ROLE_KEY**: Used only on the server (API routes) to safely upsert notifications and persist read state under RLS.
+- **Goldsky keys**: Manage and deploy Mirror pipelines that index on-chain events into Postgres for live leaderboards and automation.
+
+## 🗺️ Data Flow Overview
+
+- Users connect wallet and interact with smart contracts (campaigns, submissions, voting, NFT).
+- Frontend reads contract state via Thirdweb; live events are also indexed by Goldsky → Postgres.
+- Frontend queries API routes for merged datasets (e.g., notifications with persisted read flags in Supabase).
+- User profiles, avatars, preferences are stored in Supabase (RLS enforced).
+
+## 🔌 Thirdweb Integration
+
+- Used for wallet connection and contract reads/writes from the frontend.
+- Required env: `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` plus deployed contract addresses.
+- Contracts: `CampaignManager`, `ArtworkSubmission`, `Voting`, `GalleryNFT` are consumed via Thirdweb SDK to ensure users globally see and interact with the same on-chain state.
+
+## 🎨 UX & Styling
+
+- Tailwind CSS for utility-first styles and responsive layout.
+- Framer Motion for page and component animations.
+- Lenis for high-performance, smooth scrolling across pages and galleries.
+
+## ⚙️ Operations (Pipelines & DB)
+
+### Goldsky pipelines
+
+Definitions are in `ether-frontend/goldsky/`. Example apply commands:
+
+```bash
+goldsky pipeline apply ether-frontend/goldsky/ether-core-pipeline.yaml
+goldsky pipeline apply ether-frontend/goldsky/ether-leaderboard-pipeline.yaml
+goldsky pipeline apply ether-frontend/goldsky/ether-automation-pipeline.yaml
+goldsky pipeline apply ether-frontend/goldsky/ether-nft-pipeline.yaml
 ```
 
 ## 🧪 Testing
