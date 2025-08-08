@@ -6,7 +6,8 @@ sources:
     dataset_name: ethereum_sepolia.erc721_transfers
     version: 1.2.0
     type: dataset
-    start_at: latest
+    start_at: earliest
+    filter: address = '0x4d3B0C614DE9830BE97d6B23c74d8356A5CcDd89'
 
 transforms:
   nft_data:

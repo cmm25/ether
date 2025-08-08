@@ -7,7 +7,8 @@ sources:
     dataset_name: ethereum_sepolia.raw_logs
     version: 1.0.0
     type: dataset
-    start_at: latest
+    start_at: earliest
+    filter: address IN ('0xF55843733EBF4d8355DF198F99B1b01620C9eD9B', '0x2B56e4bb5B885C5B570653491bcb7E69a888C913')
 
 transforms:
   campaign_end_triggers:
@@ -18,6 +19,7 @@ transforms:
         topics,
         block_number,
         block_timestamp,
+        log_index,
         'pending_processing' as automation_status,
         CONCAT('campaign_end_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as trigger_key
       FROM ethereum_logs
@@ -32,6 +34,7 @@ transforms:
         topics,
         block_number,
         block_timestamp,
+        log_index,
         'ready_for_minting' as mint_status,
         CONCAT('winner_', CAST(block_number AS STRING), '_', CAST(log_index AS STRING)) as winner_key
       FROM ethereum_logs

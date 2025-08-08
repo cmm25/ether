@@ -7,13 +7,14 @@ sources:
     dataset_name: ethereum_sepolia.erc721_transfers
     version: 1.2.0
     type: dataset
-    start_at: latest
+    start_at: earliest
 
   ethereum_logs:
     dataset_name: ethereum_sepolia.raw_logs
     version: 1.0.0
     type: dataset
-    start_at: latest
+    start_at: earliest
+    filter: address IN ('0x2B56e4bb5B885C5B570653491bcb7E69a888C913', '0xF55843733EBF4d8355DF198F99B1b01620C9eD9B', '0x929b94e6Df14F6E91a290c0778feA81b4F26d358')
 
 transforms:
   campaign_nft_mints:
@@ -39,10 +40,11 @@ transforms:
         topics,
         block_number,
         block_timestamp,
-        log_index
+        log_index,
+        CONCAT(transaction_hash, '_', CAST(log_index AS STRING)) as vote_id
       FROM ethereum_logs
       WHERE address = '0x2B56e4bb5B885C5B570653491bcb7E69a888C913'
-    primary_key: transaction_hash
+    primary_key: vote_id
 
   campaign_lifecycle:
     sql: |
@@ -51,10 +53,12 @@ transforms:
         address as campaign_contract,
         topics,
         block_number,
-        block_timestamp
+        block_timestamp,
+        log_index,
+        CONCAT(transaction_hash, '_', CAST(log_index AS STRING)) as lifecycle_id
       FROM ethereum_logs
       WHERE address = '0xF55843733EBF4d8355DF198F99B1b01620C9eD9B'
-    primary_key: transaction_hash
+    primary_key: lifecycle_id
 
   artwork_submissions:
     sql: |
@@ -64,10 +68,11 @@ transforms:
         topics,
         block_number,
         block_timestamp,
-        log_index
+        log_index,
+        CONCAT(transaction_hash, '_', CAST(log_index AS STRING)) as submission_id
       FROM ethereum_logs
       WHERE address = '0x929b94e6Df14F6E91a290c0778feA81b4F26d358'
-    primary_key: transaction_hash
+    primary_key: submission_id
 
 sinks:
   nft_mints_sink:
